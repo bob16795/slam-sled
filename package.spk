@@ -1,0 +1,4 @@
+"slam-lang/slam-stdlib" req
+
+"src" src
+"sled" bin
