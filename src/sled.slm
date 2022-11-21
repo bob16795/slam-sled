@@ -1,4 +1,159 @@
-proc main 0 0
+inc "stdlib/os.slm"
+inc "stdlib.slm"
+
+class termios
+  const NCCS 19
+  prop iflag 4
+  prop oflag 4
+  prop cflag 4  
+  prop lflag 4
+
+  prop line 1
+  prop cc termios.NCCS
+end
+
+class state
+  var current int.SIZE
+
+  prop _ 4 
+  prop starttermios termios.SIZE
+  prop width int.SIZE
+  prop height int.SIZE
+end
+
+var _ 4
+var raw termios.SIZE
+
+const ISIG 1
+const ICANON 2
+const IEXTEN 32768
+const ECHO 8
+const ECHOE 16
+const ECHONL 32
+
+const BRKINT 2
+const INPCK 16
+const ISTRIP 32
+const IXON 1024
+const ICRNL 256
+
+const OPOST 1
+
+const VMIN 6
+const VTIME 5
+
+oper proc rawmodeon 0 0
+  raw
+  5401h
+  0
+  sysc.IOCTL
+  sys3
+  disc
+
+  state.current read state.starttermios .
+  raw termios.SIZE (mem.cpy)
+
+  raw termios.iflag .
+  copy read
+  BRKINT ICRNL || INPCK || ISTRIP || IXON || ~ &&
+  put disc
+
+  raw termios.oflag .
+  copy read
+  OPOST ~ &&
+  put disc
+
+  raw termios.lflag .
+  copy read
+  ECHO ECHOE || ECHONL || ISIG || ICANON || IEXTEN || ~ &&
+  put disc
+
+  raw termios.cc . VMIN + 0 putc disc
+  raw termios.cc . VTIME + 1 putc disc
+
+  raw
+  5404h
+  0
+  sysc.IOCTL
+  sys3
+  disc
+
+  ret
+end
+
+oper proc rawmodeoff 0 0
+  0
+  5404h
+  state.current read state.starttermios .
+  sysc.IOCTL
+  sys3
+  disc
+
+  ret
+end
+
+oper proc die 1 0
+  cstr.print
+  "\e[2J" cstr.print
+  "\e[H" cstr.print
+  rawmodeoff
+
+  1 quit
+end
+
+oper proc clearscreen 0 0
+  "\e[2J" cstr.print
+  "\e[H" cstr.print
+
+  ret
+end
+
+var tmpchar 1
+var nread int.SIZE
+
+oper proc readchar 0 1
+  do
+    1
+    tmpchar
+    0
+    (os.readf)
+    nread swap put disc
+
+    nread read -1 ==
+  end
+
+  tmpchar readc
+
+  ret
+end
+
+proc processkey 1 1
+  copy 'q' == if
+    "\e[2J" cstr.print
+    "\e[H" cstr.print
+
+    rawmodeoff
+    0 quit
+  end
+  disc
+
+  ret
+end
+
+oper proc main 0 0
+  state.current
+  state.SIZE (heap.alloc)
+  put disc
+
+  rawmodeon
+  clearscreen
+
+  do
+    readchar
+    processkey
+
+    1
+  end
 
   ret
 end
