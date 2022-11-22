@@ -1,5 +1,19 @@
 inc "stdlib/os.slm"
+inc "stdlib/string.slm"
+inc "stdlib/range.slm"
 inc "stdlib.slm"
+
+enum
+1000 EK_ARROW_LEFT
+     EK_ARROW_RIGHT
+     EK_ARROW_UP
+     EK_ARROW_DOWN
+     EK_DEL
+     EK_PAGE_UP
+     EK_PAGE_DOWN
+     EK_HOME
+     EK_END
+end
 
 class termios
   const NCCS 19
@@ -12,17 +26,46 @@ class termios
   prop cc termios.NCCS
 end
 
+class winsize
+  prop row 2
+  prop col 2
+  prop _ 8
+end
+
+class erow
+  prop size int.SIZE
+  prop rsize int.SIZE
+
+  prop chars int.SIZE
+  prop render int.SIZE
+end
+
 class state
   var current int.SIZE
-
   prop _ 4 
   prop starttermios termios.SIZE
-  prop width int.SIZE
-  prop height int.SIZE
+
+  prop filename int.SIZE
+  prop statusmsg 80
+
+  prop width 1
+  prop height 1
+
+  prop cx int.SIZE
+  prop cy int.SIZE
+
+  prop rx int.SIZE
+
+  prop sx int.SIZE
+  prop sy int.SIZE
+
+  prop numrows int.SIZE
+  prop rows int.SIZE
 end
 
 var _ 4
 var raw termios.SIZE
+var ws winsize.SIZE
 
 const ISIG 1
 const ICANON 2
@@ -41,6 +84,220 @@ const OPOST 1
 
 const VMIN 6
 const VTIME 5
+
+const TABSIZE 4
+
+var tmprow int.SIZE
+var tmpfp int.SIZE
+var tmpchar int.SIZE
+var tmpln int.SIZE
+
+oper proc getrow 1 1
+  copy state.current read state.numrows . read > if
+    disc
+    NULL
+    ret
+  end
+
+  int.SIZE *
+  state.current read state.rows . read + read
+
+  ret
+end
+
+var tmpstr int.SIZE
+var altchar int.SIZE
+
+oper proc updaterow 1 0
+  tmprow
+  swap getrow put disc
+
+  tmpstr (str.new) put disc
+
+  0
+  tmprow read erow.size . read
+  range.for : 1 0
+    altchar 0 put disc
+    read tmprow read erow.chars . read + readc
+    altchar swap putc disc
+
+    altchar readc 9 == if
+      tmpstr read
+      do
+        " " (str.catc)
+
+        tmpstr read str.size . read TABSIZE /% swap disc 0 !=
+      end
+      tmpstr swap put disc
+
+      ret
+    end
+
+    tmpstr read
+    altchar (str.catc)
+    tmpstr swap put disc
+
+    ret
+  end
+
+  tmprow read erow.rsize .
+  tmpstr read str.size . read 1 -
+  put disc
+  
+  tmprow read erow.render .
+  tmpstr read str.size . read
+  (heap.zalloc)
+  put disc
+
+  tmprow read erow.render . read
+  tmpstr read str.data .
+  tmpstr read str.size . read
+  (mem.cpy)
+  
+  tmpstr read (str.free)
+
+  ret
+end
+
+var tmpsize int.SIZE
+
+oper proc cxtorx 1 1
+  tmprow
+  state.current read state.cy . read getrow
+  put disc
+
+  tmpsize 0 put disc
+
+  0
+  swap 1 -
+  range.for : 1 0
+    altchar 0 put disc
+    read tmprow read erow.chars . read + readc
+    altchar swap putc disc
+
+    altchar readc 9 == if
+      do
+        tmpsize copy read 1 + put disc
+
+        tmpsize read TABSIZE /% swap disc 0 !=
+      end
+      ret
+    end
+    tmpsize copy read 1 + put disc
+
+    ret
+  end
+
+  tmpsize read
+
+  ret
+end
+
+{ file io }
+oper proc editoropen 1 0
+  copy state.current read state.filename . swap put disc
+
+  (filestream.new)
+  tmpfp swap put disc
+
+  do
+    tmpln (str.new) put disc
+
+    do
+      tmpchar
+      0
+      put disc
+
+      tmpchar
+      tmpfp read (filestream.readchar)
+      putc disc
+
+      tmpchar readc
+      copy 10 == if
+        disc
+        brk
+      end
+      copy 13 == if
+        disc
+        brk
+      end
+      copy 0 == if
+        disc
+        brk
+      end
+      disc
+      tmpln read
+      tmpchar
+      (str.catc)
+      disc
+
+      1
+    end
+
+    state.current read state.rows . read
+    state.current read state.numrows . read 1 + int.SIZE *
+    (heap.realloc)
+    state.current read state.rows . swap put disc
+
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + 
+    erow.SIZE (heap.zalloc)
+    put disc
+
+    tmpln read str.data .
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + read
+    erow.size .
+    covr cstr.len put disc
+
+    tmpln read str.data .
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + read
+    erow.size .
+    covr cstr.len put disc
+
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + read
+    erow.chars .
+    covr cstr.len (heap.zalloc) put disc
+
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + read
+    erow.chars . read swap
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + read
+    erow.size . read
+    (mem.cpy)
+
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + read
+    erow.rsize .
+    0 put disc
+
+    state.current read state.rows . read
+    state.current read state.numrows . read int.SIZE * + read
+    erow.render .
+    NULL put disc
+
+    state.current read state.numrows . copy read 1 + put disc
+    tmpln read (str.free)
+    
+    state.current read state.numrows . read 1 - updaterow
+
+    tmpchar readc 0 !=
+  end
+
+  ret
+end
+
+oper proc setstatus 1 0
+  state.current read state.statusmsg . swap
+  copy cstr.len 1 +
+  copy 79 > if disc 79 end
+  (mem.cpy)
+
+  ret
+end
 
 oper proc rawmodeon 0 0
   raw
@@ -101,9 +358,170 @@ oper proc die 1 0
   1 quit
 end
 
-oper proc clearscreen 0 0
-  "\e[2J" cstr.print
-  "\e[H" cstr.print
+class renderer
+  var abuf int.SIZE
+  var leftbuf int.SIZE
+  var rightbuf int.SIZE
+
+  oper proc renderstatus 0 0
+    renderer.leftbuf (str.new) put disc
+    renderer.rightbuf (str.new) put disc
+
+    renderer.abuf read
+    "\e[7m" (str.catc)
+    renderer.abuf swap put disc
+
+    renderer.rightbuf read
+    state.current read state.cy . read int.cstr (str.catc)
+    "/" (str.catc)
+    state.current read state.numrows . read int.cstr (str.catc)
+    renderer.rightbuf swap put disc
+
+    renderer.leftbuf read
+    "[NO NAME]"
+    state.current read state.filename . NULL != if
+      disc state.current read state.filename . read
+    end (str.catc)
+    " - " (str.catc)
+    state.current read state.numrows . read int.cstr (str.catc)
+    " lines" (str.catc)
+    renderer.leftbuf swap put disc
+
+    renderer.abuf read
+    renderer.leftbuf read str.data . (str.catc)
+    renderer.abuf swap put disc
+
+    renderer.leftbuf read str.size . read
+    do
+      renderer.abuf read
+      " " (str.catc)
+      renderer.abuf swap put disc
+
+      1 +
+      copy state.current read state.width . readc
+      renderer.rightbuf read str.size . read -
+      <
+    end
+    disc
+
+    renderer.abuf read
+    renderer.rightbuf read str.data . (str.catc)
+    renderer.abuf swap put disc
+
+    renderer.abuf read
+    "\e[m" (str.catc)
+    "\r\n" (str.catc)
+    "\e[K" (str.catc)
+    state.current read state.statusmsg . (str.catc)
+    renderer.abuf swap put disc
+
+    renderer.leftbuf read (str.free)
+    renderer.rightbuf read (str.free)
+
+    ret
+  end
+
+  oper proc renderrows 0 0
+    0
+    state.current read state.height . readc 1 -
+    range.for : 1 0
+      read state.current read state.sy . read +
+
+      copy state.current read state.numrows . read < ! if 
+        renderer.abuf read
+        "~" (str.catc)
+        renderer.abuf swap put disc
+      end
+      copy state.current read state.numrows . read < if
+        state.current read state.sx . read
+        covr int.SIZE *
+        state.current read state.rows . read + read erow.rsize . read < if
+          renderer.abuf read
+          covr getrow erow.render . read
+          state.current read state.sx . read +
+          (str.catc)
+          renderer.abuf swap put disc
+        end
+      end
+      renderer.abuf read
+      "\e[K" (str.catc)
+      "\r\n" (str.catc)
+      renderer.abuf swap put disc
+      
+      disc
+
+      ret
+    end
+
+    ret
+  end
+
+  oper proc blit 0 0
+    renderer.abuf read
+    (str.print)
+
+    ret
+  end
+
+  oper proc movecursor 0 0
+    state.current read state.rx . read 1 +
+    state.current read state.sx . read -
+    state.current read state.cy . read 1 +
+    state.current read state.sy . read -
+
+    renderer.abuf read
+    "\e[" (str.catc)
+    swap int.cstr (str.catc)
+    ";" (str.catc)
+    swap int.cstr (str.catc)
+    "H" (str.catc)
+    renderer.abuf swap put disc
+
+    ret
+  end
+
+  oper proc refreshscreen 0 0
+    renderer.abuf
+    (str.new)
+    put disc
+
+    renderer.abuf read
+    "\e[?25l" (str.catc)
+    "\e[H" (str.catc)
+    renderer.abuf swap put disc
+
+    renderer.renderrows
+    renderer.renderstatus
+    renderer.movecursor
+
+    renderer.abuf read
+    "\e[?25h" (str.catc)
+    renderer.abuf swap put disc
+
+    renderer.blit
+
+    renderer.abuf read
+    (str.free)
+
+    ret
+  end
+end
+
+oper proc getsize 0 0
+  ws
+  5413h
+  1
+  sysc.IOCTL
+  sys3
+  disc
+
+  state.current read state.height .
+  ws winsize.row . readc 2 -
+  putc disc
+
+  state.current read state.width .
+  ws winsize.col . readc
+  putc disc
 
   ret
 end
@@ -112,28 +530,276 @@ var tmpchar 1
 var nread int.SIZE
 
 oper proc readchar 0 1
+  tmpchar
+  0
+  putc disc
+
   do
-    1
-    tmpchar
-    0
-    (os.readf)
+    1 tmpchar 0 (os.readf)
     nread swap put disc
 
     nread read -1 ==
   end
 
   tmpchar readc
+  copy 27 == if
+    1 tmpchar 0 (os.readf)
+    tmpchar readc
+
+    copy '[' == if
+      1 tmpchar 0 (os.readf)
+      tmpchar readc
+
+      copy 'A' == if 
+        disc disc disc
+        EK_ARROW_UP ret
+      end
+      copy 'B' == if 
+        disc disc disc
+        EK_ARROW_DOWN ret
+      end
+      copy 'C' == if 
+        disc disc disc
+        EK_ARROW_RIGHT ret
+      end
+      copy 'D' == if 
+        disc disc disc
+        EK_ARROW_LEFT ret
+      end
+      copy 'H' == if 
+        disc disc disc
+        EK_HOME ret
+      end
+      copy 'D' == if 
+        disc disc disc
+        EK_END ret
+      end
+
+      copy '1' == if
+        1 tmpchar 0 (os.readf)
+        tmpchar readc
+        copy '~' == if 
+          disc disc disc disc
+          EK_HOME ret
+        end
+        disc
+      end
+      copy '3' == if
+        1 tmpchar 0 (os.readf)
+        tmpchar readc
+        copy '~' == if 
+          disc disc disc disc
+          EK_DEL ret
+        end
+        disc
+      end
+      copy '4' == if
+        1 tmpchar 0 (os.readf)
+        tmpchar readc
+        copy '~' == if 
+          disc disc disc disc
+          EK_END ret
+        end
+        disc
+      end
+      copy '5' == if
+        1 tmpchar 0 (os.readf)
+        tmpchar readc
+        copy '~' == if 
+          disc disc disc disc
+          EK_PAGE_UP ret
+        end
+        disc
+      end
+      copy '6' == if
+        1 tmpchar 0 (os.readf)
+        tmpchar readc
+        copy '~' == if 
+          disc disc disc disc
+          EK_PAGE_DOWN ret
+        end
+        disc
+      end
+      disc
+    end
+    copy 'O' == if
+      1 tmpchar 0 (os.readf)
+      tmpchar readc
+
+      copy 'H' == if 
+        disc disc disc
+        EK_HOME ret
+      end
+      copy 'D' == if 
+        disc disc disc
+        EK_END ret
+      end
+      disc
+    end
+    disc
+  end
 
   ret
 end
 
-proc processkey 1 1
-  copy 'q' == if
+oper proc scroll 0 0
+  state.current read state.rx .
+  0 put disc
+
+  state.current read state.cy . read
+  state.current read state.numrows . read < if
+    state.current read state.rx .
+    state.current read state.cx . read
+    cxtorx put disc
+  end
+
+  state.current read state.sy . read 
+  state.current read state.cy . read > if
+    state.current read state.sy .
+    state.current read state.cy . read
+    put disc
+  end
+
+  state.current read state.sy . read 
+  state.current read state.height . readc +
+  state.current read state.cy . read > ! if
+    state.current read state.sy .
+
+    state.current read state.cy . read
+    state.current read state.height . readc - 1 +
+    
+    put disc
+  end
+  state.current read state.sx . read 
+  state.current read state.rx . read > if
+    state.current read state.sx .
+    state.current read state.rx . read
+    put disc
+  end
+
+  state.current read state.sx . read 
+  state.current read state.width . readc +
+  state.current read state.rx . read > ! if
+    state.current read state.sx .
+
+    state.current read state.rx . read
+    state.current read state.width . readc - 1 +
+    
+    put disc
+  end
+
+  ret
+end
+
+enum
+0   UP
+    DOWN
+    LEFT
+    RIGHT
+end
+
+oper proc movecursor 1 0
+  copy UP == if 
+    state.current read state.cy . read 0 > if
+      state.current read state.cy . copy read 1 - put disc
+    end
+  end
+  copy DOWN == if 
+    state.current read state.cy . read
+    state.current read state.numrows . read 1 - < if
+      state.current read state.cy . copy read 1 + put disc
+    end
+  end
+  copy LEFT == if
+    state.current read state.cx . read 0 != if 
+      disc
+      state.current read state.cx . copy read 1 - put disc
+
+      ret
+    end
+    state.current read state.cy . read 0 > if 
+      state.current read state.cy . copy read 1 - put disc
+      
+      state.current read state.cx .
+      state.current read state.cy . read getrow erow.size . read
+      put disc
+      
+    end
+  end
+  copy RIGHT == if
+    state.current read state.cy . read getrow
+    NULL != if
+      state.current read state.cx . read 
+      state.current read state.cy . read getrow erow.size . read
+      < if 
+        disc
+        state.current read state.cx . copy read 1 + put disc
+
+        ret
+      end
+      state.current read state.cx . read 
+      state.current read state.cy . read getrow erow.size . read
+      == if 
+        state.current read state.cy . copy read 1 + put disc
+        disc
+        state.current read state.cx . 0 put disc
+
+        ret
+      end
+    end
+  end
+  disc
+
+  ret
+end
+
+oper proc processkey 1 0
+  copy 'q' 1fh && == if
     "\e[2J" cstr.print
     "\e[H" cstr.print
 
     rawmodeoff
     0 quit
+  end
+  copy 'w' == if 
+    UP movecursor
+  end
+  copy 's' == if 
+    DOWN movecursor
+  end
+  copy 'a' == if 
+    LEFT movecursor
+  end
+  copy 'd' == if 
+    RIGHT movecursor
+  end
+  copy EK_ARROW_UP == if 
+    UP movecursor
+  end
+  copy EK_ARROW_DOWN == if 
+    DOWN movecursor
+  end
+  copy EK_ARROW_LEFT == if 
+    LEFT movecursor
+  end
+  copy EK_ARROW_RIGHT == if 
+    RIGHT movecursor
+  end
+  copy EK_PAGE_UP == if 
+    state.current read state.rows . read
+    do
+      UP movecursor
+      1 - copy
+    end
+    disc
+  end
+  copy EK_PAGE_DOWN == if 
+    state.current read state.rows . read
+    do
+      DOWN movecursor
+      1 - copy
+    end
+    disc
   end
   disc
 
@@ -142,13 +808,25 @@ end
 
 oper proc main 0 0
   state.current
-  state.SIZE (heap.alloc)
+  state.SIZE (heap.zalloc)
   put disc
 
+  state.current read state.rows .
+  0 (heap.zalloc)
+  put disc  
+
+  argc 1 > if 
+    1 (os.args) editoropen
+  end
+
   rawmodeon
-  clearscreen
+  getsize
+
+  "HELP: Ctrl-Q = quit" setstatus
 
   do
+    scroll
+    renderer.refreshscreen
     readchar
     processkey
 
