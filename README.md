@@ -1,8 +1,11 @@
 # sled
 
-A vim clone written in slam
+A text editor written in slam
 
 # todo
 
-- Slam highlighting support
-
+- [ ] FIX BUGS
+- [.] Slam highlighting support
+- [ ] Modal?
+- [ ] clear on close 
+- [ ] Better file management
