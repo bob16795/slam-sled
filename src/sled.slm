@@ -2,6 +2,7 @@ inc "stdlib/os.slm"
 inc "stdlib/string.slm"
 inc "stdlib/range.slm"
 inc "stdlib.slm"
+{inc "compiler/simulator.slm"}
 
 enum
 127  EK_BACKSPACE
@@ -19,15 +20,42 @@ end
 
 enum
 0   HL_NORMAL
+    HL_COMMENT
     HL_NUMBER
+    HL_STRING
 end
 
+const HLF_NUMBERS 1
+const HLF_STRINGS 2
+
+class editorsyntax
+  prop name int.SIZE
+  prop flags int.SIZE
+  prop scomment int.SIZE
+
+  var tmp int.SIZE
+
+  proc new 2 1
+    editorsyntax.tmp 
+    16
+    (heap.zalloc)
+    put disc
+
+    editorsyntax.tmp read editorsyntax.flags . swap put disc
+    editorsyntax.tmp read editorsyntax.name . swap put disc
+    editorsyntax.tmp read editorsyntax.scomment . swap put disc
+
+    editorsyntax.tmp read 
+
+    ret
+  end
+end
 
 class termios
   const NCCS 19
   prop iflag 4
   prop oflag 4
-  prop cflag 4  
+  prop cflag 4
   prop lflag 4
 
   prop line 1
@@ -44,14 +72,15 @@ class erow
   prop size int.SIZE
   prop rsize int.SIZE
 
-  prop chars int.size
+  prop chars int.SIZE
   prop render int.SIZE
 
   prop hl int.SIZE
 
   oper proc free 1 0
-    copy erow.chars . read (heap.free)
-    copy erow.render . read (heap.free)
+    copy erow.chars . read copy NULL != if (heap.free) 0 end disc
+    copy erow.render . read copy NULL != if (heap.free) 0 end disc
+    copy erow.hl . read copy NULL != if (heap.free) 0 end disc
 
     (heap.free)
     ret
@@ -79,6 +108,8 @@ class state
 
   prop numrows int.SIZE
   prop rows int.SIZE
+
+  prop syntax int.SIZE
 
   prop dirty int.SIZE
 end
@@ -118,6 +149,52 @@ oper proc CTRL 1 1
   ret
 end
 
+oper proc iscntrl 1 1
+  copy 32 <
+  swap 126 > ||
+
+  ret
+end
+
+oper proc sepr 1 1
+  copy 0 == if disc bool.true ret end
+
+  tmpchar swap putc disc
+
+  ",.()+-/*=~%<>[]; \t"
+  do
+    copy readc tmpchar readc == if
+      disc bool.true ret
+    end
+
+    1 +
+    copy readc 0 !=
+  end
+  disc
+
+  bool.false
+
+  ret
+end
+
+oper proc setstatus 1 0
+  state.current read state.statusmsg . swap
+  copy cstr.len 1 +
+  copy 79 > if disc 79 end
+  (mem.cpy)
+
+  ret
+end
+
+oper proc appendstatus 1 0
+  state.current read state.statusmsg . copy cstr.len + swap
+  copy cstr.len 1 +
+  copy 79 > if disc 79 end
+  (mem.cpy)
+
+  ret
+end
+
 oper proc getrow 1 1
   copy state.current read state.numrows . read > if
     disc
@@ -133,31 +210,124 @@ end
 
 var tmpstr int.SIZE
 var altchar int.SIZE
+var prevsep int.SIZE
+var instring int.SIZE
+var prevhl int.SIZE
+var iscomm int.SIZE
 
-oper proc updatehi 1 0
+var scslen int.SIZE
+
+oper proc updatehi 0 0
   tmprow read erow.hl . read NULL != if
-    tmprow read erow.hl . read (heap.free)
+    ret
   end
 
+  tmprow read erow.hl .
+  tmprow read erow.rsize . read (heap.zalloc)
+  put disc
+
+  state.current read state.syntax . read NULL == if
+    ret
+  end
+
+  prevsep 1 put disc
+  instring 0 put disc
+  iscomm 0 put disc
+  prevhl HL_NORMAL put disc
+
+  scslen 
+  state.current read state.syntax . read editorsyntax.scomment . read cstr.len
+  put disc
+
+  0
+  do
+    altchar swap put disc
+
+    altchar read tmprow read erow.render . read +
+    state.current read state.syntax . read editorsyntax.scomment . read
+    scslen read
+    (mem.eq) if
+      iscomm 1 put disc
+    end
+
+    state.current read state.syntax . read editorsyntax.flags . read
+    copy HLF_NUMBERS && if
+      altchar read tmprow read erow.render . read + readc 
+      copy '0' < ! swap '9' > ! &&
+      prevsep read
+      prevhl read HL_NUMBER == || &&
+      if 
+        altchar read tmprow read erow.hl . read + HL_NUMBER putc disc
+      end
+
+      prevhl
+      altchar read tmprow read erow.hl . read + readc
+      put disc
+    end
+    copy HLF_STRINGS && if
+      instring read
+      copy if
+        altchar read tmprow read erow.hl . read + HL_STRING putc disc
+        altchar read tmprow read erow.render . read + readc 
+        instring read == if
+          instring 0 put disc
+        end
+        prevsep 1 put disc
+      end
+      0 == if
+        altchar read tmprow read erow.render . read + readc 
+        copy '"' ==
+        covr '`' == ||
+        covr ''' == || if
+          instring
+          covr
+          put disc
+          altchar read tmprow read erow.hl . read + HL_STRING putc disc
+        end
+        disc
+      end
+    end
+    disc
+
+    iscomm read 0 != if
+      altchar read tmprow read erow.hl . read + HL_COMMENT putc disc
+    end
+
+    prevsep
+    altchar read tmprow read erow.render . read + readc sepr
+    put disc
+
+    altchar read 1 +
+    altchar read
+    tmprow read erow.rsize . read <
+  end
+  disc
+
+  altchar 0 put disc
 
   ret
 end
 
-oper proc updaterow 1 0
-  tmprow
-  swap getrow put disc
+oper proc hltocolor 1 1
+  copy HL_NUMBER == if disc 33 ret end
+  copy HL_STRING == if disc 34 ret end
+  copy HL_COMMENT == if disc 36 ret end
+  disc 37
+
+  ret
+end
+
+oper proc updaterow 0 0
+  tmprow read erow.render . read NULL != if
+    ret
+  end
 
   tmpstr (str.new) put disc
 
-  tmprow read erow.render . read NULL != if
-    tmprow read erow.render . read (heap.free)
-  end
-
+  altchar 0 put disc
   0
-  tmprow read erow.size . read
-  range.for : 1 0
-    altchar 0 put disc
-    read tmprow read erow.chars . read + readc
+  do
+    copy tmprow read erow.chars . read + readc
     altchar swap putc disc
 
     altchar readc 9 == if
@@ -175,9 +345,13 @@ oper proc updaterow 1 0
     tmpstr read
     altchar (str.catc)
     tmpstr swap put disc
-
-    ret
+  
+    1 +
+    copy tmprow read erow.size . read <
   end
+  disc
+
+  altchar 0 put disc
 
   tmprow read erow.rsize .
   tmpstr read str.size . read 1 -
@@ -192,10 +366,13 @@ oper proc updaterow 1 0
   tmpstr read str.data .
   tmpstr read str.size . read
   (mem.cpy)
+
+  tmprow read erow.hl . read NULL != if
+    tmprow read erow.hl . read (heap.free)
+    tmprow read erow.hl . NULL put disc
+  end
   
   tmpstr read (str.free)
-
-  updatehi
 
   ret
 end
@@ -234,6 +411,82 @@ oper proc cxtorx 1 1
   ret
 end
 
+proc resetrow 1 0
+  getrow tmprow swap put disc
+  tmprow read erow.render . read NULL != if
+    tmprow read erow.render . read (heap.free)
+    tmprow read erow.render . NULL put disc
+  end
+
+  state.current read state.dirty . copy read 1 + put disc
+
+  ret
+end
+
+oper proc updateft 0 0
+  tmpstr (str.new) put disc
+
+  tmpchar 0 put disc
+
+  state.current read state.filename . read
+  do
+    tmpchar
+    covr readc
+    putc disc
+
+    tmpstr read
+    tmpchar (str.catc)
+    tmpstr swap put disc
+
+    tmpchar readc '.' == if
+      tmpstr read str.size . 0 put disc
+    end
+
+    1 +
+    copy readc 0 !=
+  end
+  disc
+
+  0
+  do
+    copy getrow NULL == if brk end
+    copy resetrow
+    
+    1 +
+
+    1  
+  end
+  disc
+
+  tmpstr read str.data .
+  tmpstr read str.size . read + 0 putc disc
+
+  tmpstr read str.data . "slm" (cstr.eq) if
+    state.current read state.syntax .
+    "$$"
+    "slm" HLF_NUMBERS HLF_STRINGS || editorsyntax.new
+    put disc
+
+    tmpstr read (str.free)
+
+    ret
+  end
+
+  tmpstr read str.data . "spk" (cstr.eq) if
+    state.current read state.syntax .
+    "spk" HLF_STRINGS editorsyntax.new
+    put disc
+
+    tmpstr read (str.free)
+
+    ret
+  end
+
+  tmpstr read (str.free)
+
+  ret
+end
+
 { file io }
 oper proc editoropen 1 0
   copy state.current read state.filename . swap put disc
@@ -241,14 +494,23 @@ oper proc editoropen 1 0
   (filestream.new)
   tmpfp swap put disc
 
+  0
+  do
+    copy getrow NULL == if brk end
+    copy getrow erow.free
+    
+    1 +
+
+    1  
+  end
+  disc
+  
+  state.current read state.numrows . 0 put disc
+
   do
     tmpln (str.new) put disc
-
+    tmpchar 0 put disc
     do
-      tmpchar
-      0
-      put disc
-
       tmpchar
       tmpfp read (filestream.readchar)
       putc disc
@@ -267,6 +529,7 @@ oper proc editoropen 1 0
         brk
       end
       disc
+      
       tmpln read
       tmpchar
       (str.catc)
@@ -280,34 +543,29 @@ oper proc editoropen 1 0
     (heap.realloc)
     state.current read state.rows . swap put disc
 
+
     state.current read state.rows . read
     state.current read state.numrows . read int.SIZE * + 
     erow.SIZE (heap.zalloc)
     put disc
 
-    tmpln read str.data .
+    tmpln read str.size . read
     state.current read state.rows . read
     state.current read state.numrows . read int.SIZE * + read
     erow.size .
-    covr cstr.len put disc
+    swap put disc
 
-    tmpln read str.data .
-    state.current read state.rows . read
-    state.current read state.numrows . read int.SIZE * + read
-    erow.size .
-    covr cstr.len put disc
-
+    tmpln read str.size . read
     state.current read state.rows . read
     state.current read state.numrows . read int.SIZE * + read
     erow.chars .
-    covr cstr.len (heap.zalloc) put disc
+    swap 1 + (heap.zalloc) put disc
 
     state.current read state.rows . read
     state.current read state.numrows . read int.SIZE * + read
-    erow.chars . read swap
-    state.current read state.rows . read
-    state.current read state.numrows . read int.SIZE * + read
-    erow.size . read
+    erow.chars . read
+    tmpln read str.data .
+    tmpln read str.size . read
     (mem.cpy)
 
     state.current read state.rows . read
@@ -315,18 +573,23 @@ oper proc editoropen 1 0
     erow.rsize .
     0 put disc
 
-    state.current read state.rows . read
-    state.current read state.numrows . read int.SIZE * + read
-    erow.render .
-    NULL put disc
+    state.current read state.numrows . read getrow
+    tmprow swap put disc
+
+    updaterow
 
     state.current read state.numrows . copy read 1 + put disc
     tmpln read (str.free)
     
-    state.current read state.numrows . read 1 - updaterow
-
     tmpchar readc 0 !=
   end
+
+  state.current read state.numrows . copy read 1 - put disc
+
+  "Opened " setstatus
+  state.current read state.filename . read appendstatus
+
+  updateft
 
   ret
 end
@@ -362,9 +625,8 @@ oper proc insertchar 1 0
   state.current read state.cy . read getrow erow.chars . read
   tmpat read + swap putc disc
 
-  state.current read state.cy . read updaterow
+  state.current read state.cy . read resetrow
 
-  state.current read state.dirty . copy read 1 + put disc
   ret
 end
 
@@ -415,30 +677,24 @@ oper proc insertrow 1 0
   tmprow read
   put disc
   
-  tmpat read updaterow
+  tmpat read resetrow
 
   ret
 end
 
 oper proc insertline 0 0
   state.current read state.cy . copy read 1 + put disc
+  state.current read state.cy . read 1 - getrow erow.chars . read
+  state.current read state.cx . read +
+  insertrow
+  state.current read state.cy . read 1 - getrow erow.chars . read
+  state.current read state.cx . read + 0 putc disc
 
-  state.current read state.cx . read 0 == if
-    "" insertrow
-  end
-  state.current read state.cx . read 0 != if
-    state.current read state.cy . read 1 - getrow erow.chars . read
-    state.current read state.cx . read +
-    insertrow
-    state.current read state.cy . read 1 - getrow erow.chars . read
-    state.current read state.cx . read + 0 putc disc
+  state.current read state.cy . read 1 - getrow erow.size .
+  state.current read state.cx . read
+  put disc
 
-    state.current read state.cy . read 1 - getrow erow.size .
-    state.current read state.cx . read
-    put disc
-  
-    state.current read state.cy . read 1 - updaterow
-  end
+  state.current read state.cy . read 1 - resetrow
   state.current read state.cx . 0 put disc
 
   ret
@@ -457,7 +713,6 @@ oper proc delrow 1 0
   movemem
 
   state.current read state.numrows . copy read 1 - put disc
-  state.current read state.dirty . copy read 1 + put disc
 
   ret
 end
@@ -487,7 +742,7 @@ oper proc appendrow 1 0
   
   tmpstr read (str.free)
 
-  state.current read state.cy . read updaterow
+  state.current read state.cy . read resetrow
 
   ret
 end
@@ -509,7 +764,7 @@ oper proc delchar 1 0
     delrow
     state.current read state.cy . copy read 1 - put disc
 
-    state.current read state.cy . read updaterow
+    state.current read state.cy . read resetrow
 
     ret
   end
@@ -531,9 +786,8 @@ oper proc delchar 1 0
 
   state.current read state.cx . copy read 1 - put disc
 
-  state.current read state.cy . read updaterow
+  state.current read state.cy . read resetrow
 
-  state.current read state.dirty . copy read 1 + put disc
   ret
 end
 
@@ -543,8 +797,16 @@ oper proc rowstostr 0 0
   0
   state.current read state.numrows . read 1 -
   range.for : 1 0
+    read getrow
+    tmprow swap put disc
+
+    tmprow read NULL == if ret end
+
+    tmprow read erow.chars . read
+    tmprow read erow.size . read + 0 putc disc
+
     tmpln read
-    swap read getrow erow.chars . read (str.catc)
+    tmprow read erow.chars . read (str.catc)
     "\n" (str.catc)
     tmpln swap put disc
 
@@ -553,16 +815,6 @@ oper proc rowstostr 0 0
 
   ret
 end
-
-oper proc setstatus 1 0
-  state.current read state.statusmsg . swap
-  copy cstr.len 1 +
-  copy 79 > if disc 79 end
-  (mem.cpy)
-
-  ret
-end
-
 
 oper proc rawmodeon 0 0
   raw
@@ -587,7 +839,7 @@ oper proc rawmodeon 0 0
 
   raw termios.lflag .
   copy read
-  ECHO ECHOE || ECHONL || ISIG || ICANON || IEXTEN || ~ &&
+  ECHO ISIG || ICANON || IEXTEN || ~ &&
   put disc
 
   raw termios.cc . VMIN + 0 putc disc
@@ -604,9 +856,9 @@ oper proc rawmodeon 0 0
 end
 
 oper proc rawmodeoff 0 0
-  0
-  5404h
   state.current read state.starttermios .
+  5404h
+  0
   sysc.IOCTL
   sys3
   disc
@@ -623,10 +875,26 @@ oper proc die 1 0
   1 quit
 end
 
+var tmplen int.SIZE
+
 class renderer
   var abuf int.SIZE
   var leftbuf int.SIZE
   var rightbuf int.SIZE
+  var color int.SIZE
+
+  oper proc setcolor 1 0
+    renderer.color read covr == if disc ret end
+    renderer.color swap put disc
+
+    renderer.abuf read
+    "\e[" (str.catc)
+    renderer.color read int.cstr (str.catc)
+    "m" (str.catc)
+    renderer.abuf swap put disc
+
+    ret
+  end
 
   oper proc renderstatus 0 0
     renderer.leftbuf (str.new) put disc
@@ -640,6 +908,11 @@ class renderer
     state.current read state.cy . read int.cstr (str.catc)
     "/" (str.catc)
     state.current read state.numrows . read int.cstr (str.catc)
+    " " (str.catc)
+    "no ft"
+    state.current read state.syntax . read NULL != if
+      disc state.current read state.syntax . read editorsyntax.name . read
+    end (str.catc)
     renderer.rightbuf swap put disc
 
     renderer.leftbuf read
@@ -647,9 +920,6 @@ class renderer
     state.current read state.filename . read NULL != if
       disc state.current read state.filename . read
     end (str.catc)
-    " - " (str.catc)
-    state.current read state.numrows . read int.cstr (str.catc)
-    " lines" (str.catc)
     state.current read state.dirty . read if
       " (modified)" (str.catc)
     end
@@ -713,28 +983,68 @@ class renderer
     range.for : 1 0
       read state.current read state.sy . read +
 
+      copy getrow tmprow swap put disc
+
       copy state.current read state.numrows . read < ! if 
         renderer.abuf read
         "~" (str.catc)
         renderer.abuf swap put disc
       end
       copy state.current read state.numrows . read < if
-        state.current read state.sx . read
-        covr int.SIZE *
-        state.current read state.rows . read + read erow.rsize . read 1 + < if
-          renderer.abuf read
-          covr getrow erow.render . read
-          state.current read state.sx . read +
-          (str.catc)
-          renderer.abuf swap put disc
+        updaterow
+        updatehi
+        tmprow read erow.rsize . read 
+        state.current read state.sx . read - 1 +
+        tmplen swap put disc
+        
+        tmplen read 0 < if
+          tmplen 0 put disc
         end
+        
+        tmplen read
+        state.current read state.width . read > if
+          tmplen state.current read state.width . read put disc
+        end
+
+        tmplen read 0 > if
+          tmpchar 0 put disc
+          0
+          do
+            copy tmprow read erow.render . read + readc
+            tmpchar swap putc disc
+
+            copy tmprow read erow.hl . read + readc
+            hltocolor renderer.setcolor
+            
+            renderer.abuf read
+            tmpchar readc iscntrl ! if
+              tmpchar (str.catc)
+            end
+            tmpchar readc iscntrl if
+              "\e[7m" (str.catc)
+              tmpchar readc 26 < if
+                tmpchar readc '@' +
+                altchar swap putc (str.catc)
+              end
+              tmpchar readc 26 < ! if
+                tmpchar '?' putc (str.catc)
+              end
+              "\e[m" (str.catc)
+            end
+            renderer.abuf swap put disc
+
+            1 +
+            copy tmplen read <
+          end
+          disc
+        end
+        39 renderer.setcolor
       end
+      disc
       renderer.abuf read
       "\e[K" (str.catc)
       "\r\n" (str.catc)
       renderer.abuf swap put disc
-      
-      disc
 
       ret
     end
@@ -808,20 +1118,27 @@ oper proc prompt 1 1
   pbuff swap put disc
 
   do
-    tmpchar 0 put disc
-
     pbuff read str.data . setstatus
     renderer.refreshscreen
+    tmpchar 0 put disc
     1 tmpchar 0 (os.readf)
 
-    tmpchar readc
-    copy 13 == if 
+    tmpchar readc 13 == if 
       "" setstatus
+      pbuff read str.data . 
+      pbuff read str.size . read + 0 putc disc 
       pbuff read str.data . psize read +
       ret
     end
-    copy 128 <
-    swap 0 != if
+    pbuff read str.size . read 0 !=
+    tmpchar readc 127 == && if
+      pbuff read str.size . copy read 1 - put disc
+      pbuff read str.data . 
+      pbuff read str.size . read + 0 putc disc 
+    end
+    tmpchar readc 32 >
+    tmpchar readc 127 < &&
+    tmpchar readc 0 != && if
       pbuff read
       tmpchar (str.catc)
       pbuff swap put disc
@@ -833,11 +1150,62 @@ oper proc prompt 1 1
   NULL ret
 end
 
+class runner
+  oper proc run 0 0
+    {
+    511
+    65
+    "/tmp/runner.slm"
+    -100
+    (os.open)
+    tmpfp swap put disc
+
+    tmpstr (str.new) put disc
+
+    tmpstr read
+    "proc main " (str.catc)
+    ">>" prompt (str.catc)
+    " end " (str.catc)
+    tmpstr swap put disc
+
+    tmpstr read str.size . read
+    tmpfp read
+    77
+    sys2
+    disc
+
+    tmpstr read str.size . read
+    tmpstr read str.data .
+    tmpfp read
+    (os.write)
+
+    tmpstr read (str.free)
+
+    tmpfp read
+    (os.close)
+
+    "/tmp/runner.slm"
+
+    bool.false
+    (lexer.new) (lexer.run)
+    (parser.new) (parser.run)
+    (simulator.visitnode)
+    simulator.SUCCESS != if
+      "ERR" setstatus
+    end
+    }
+
+    ret
+  end
+end
+
 oper proc save 0 0
   state.current read state.filename . read NULL == if
     "Save As: " prompt
 
     state.current read state.filename . swap put disc
+
+    updateft
   end
 
   rowstostr
@@ -864,7 +1232,9 @@ oper proc save 0 0
   (os.close)
 
   tmpln read str.size . read
-  int.cstr setstatus
+  "Wrote " setstatus
+  int.cstr appendstatus
+  " bytes" appendstatus
 
   tmpln read (str.free)
 
@@ -892,7 +1262,6 @@ oper proc getsize 0 0
   ret
 end
 
-var tmpchar 1
 var nread int.SIZE
 
 oper proc readchar 0 1
@@ -1132,11 +1501,28 @@ oper proc processkey 1 0
 
     disc ret
   end
+  copy 'r' CTRL == if
+    runner.run
+
+    disc ret
+  end
+  copy 'g' CTRL == if
+    state.current read state.cy .
+    state.current read state.numrows . read
+    put disc
+    
+    state.current read state.cx .
+    state.current read state.cy . read getrow erow.size . read
+    put disc
+
+    disc ret
+  end
   copy 'q' CTRL == if
     "\e[2J" cstr.print
     "\e[H" cstr.print
 
     rawmodeoff
+    
     0 quit
   end
   copy 13 == if
@@ -1179,7 +1565,7 @@ oper proc processkey 1 0
     disc ret
   end
   copy EK_PAGE_UP == if 
-    state.current read state.rows . read
+    state.current read state.height . read
     do
       UP movecursor
       1 - copy
@@ -1189,7 +1575,7 @@ oper proc processkey 1 0
     disc ret
   end
   copy EK_PAGE_DOWN == if 
-    state.current read state.rows . read
+    state.current read state.height . read
     do
       DOWN movecursor
       1 - copy
@@ -1198,11 +1584,15 @@ oper proc processkey 1 0
 
     disc ret
   end
-  copy 'l' CTRL == if
+  copy 'o' CTRL == if
+    "Open: " prompt
+    editoropen
 
     disc ret
   end
-  copy 27 == if
+  copy iscntrl
+  covr 'l' CTRL == ||
+  covr 27 == || if
     disc ret
   end
 
@@ -1232,15 +1622,19 @@ oper proc main 0 0
 
   "HELP: Ctrl-Q = quit" setstatus
 
+  scroll
+  renderer.refreshscreen
   do
-    scroll
-    renderer.refreshscreen
     readchar
-    copy if processkey end
+    copy if
+      processkey 0
+      scroll
+      renderer.refreshscreen
+    end
+    disc
 
     1
   end
 
   ret
 end
-
