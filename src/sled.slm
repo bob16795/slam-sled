@@ -21,6 +21,7 @@ end
 enum
 0   HL_NORMAL
     HL_COMMENT
+    HL_MLCOMMENT
     HL_NUMBER
     HL_STRING
 end
@@ -32,10 +33,12 @@ class editorsyntax
   prop name int.SIZE
   prop flags int.SIZE
   prop scomment int.SIZE
+  prop mcomments int.SIZE
+  prop mcommente int.SIZE
 
   var tmp int.SIZE
 
-  proc new 2 1
+  proc new 5 1
     editorsyntax.tmp 
     16
     (heap.zalloc)
@@ -44,6 +47,8 @@ class editorsyntax
     editorsyntax.tmp read editorsyntax.flags . swap put disc
     editorsyntax.tmp read editorsyntax.name . swap put disc
     editorsyntax.tmp read editorsyntax.scomment . swap put disc
+    editorsyntax.tmp read editorsyntax.mcommente . swap put disc
+    editorsyntax.tmp read editorsyntax.mcomments . swap put disc
 
     editorsyntax.tmp read 
 
@@ -69,6 +74,7 @@ class winsize
 end
 
 class erow
+  prop idx int.SIZE
   prop size int.SIZE
   prop rsize int.SIZE
 
@@ -76,6 +82,7 @@ class erow
   prop render int.SIZE
 
   prop hl int.SIZE
+  prop hlopencomment int.SIZE
 
   oper proc free 1 0
     copy erow.chars . read copy NULL != if (heap.free) 0 end disc
@@ -117,6 +124,8 @@ end
 var _ 4
 var raw termios.SIZE
 var ws winsize.SIZE
+
+const NUMBERLEN 6
 
 const ISIG 1
 const ICANON 2
@@ -208,14 +217,23 @@ oper proc getrow 1 1
   ret
 end
 
+oper proc getnumber 1 1
+
+  ret
+end
+
 var tmpstr int.SIZE
 var altchar int.SIZE
+
 var prevsep int.SIZE
 var instring int.SIZE
+var incomment int.SIZE
 var prevhl int.SIZE
-var iscomm int.SIZE
+var linecomm int.SIZE
 
 var scslen int.SIZE
+var mcslen int.SIZE
+var mcelen int.SIZE
 
 oper proc updatehi 0 0
   tmprow read erow.hl . read NULL != if
@@ -230,24 +248,71 @@ oper proc updatehi 0 0
     ret
   end
 
+  tmprow read erow.idx . read 0 != if
+    tmprow read erow.idx . read 1 -
+    getrow erow.hlopencomment . read
+    incomment swap put disc
+  end
+
   prevsep 1 put disc
   instring 0 put disc
-  iscomm 0 put disc
+  linecomm 0 put disc
   prevhl HL_NORMAL put disc
 
   scslen 
-  state.current read state.syntax . read editorsyntax.scomment . read cstr.len
+  state.current read state.syntax . read editorsyntax.scomment . read
+  copy NULL != if cstr.len end
+  put disc
+
+  mcslen
+  state.current read state.syntax . read editorsyntax.mcomments . read
+  copy NULL != if cstr.len end
+  put disc
+
+  mcelen 
+  state.current read state.syntax . read editorsyntax.mcommente . read
+  copy NULL != if cstr.len end
   put disc
 
   0
   do
     altchar swap put disc
 
-    altchar read tmprow read erow.render . read +
-    state.current read state.syntax . read editorsyntax.scomment . read
-    scslen read
-    (mem.eq) if
-      iscomm 1 put disc
+    scslen read 0 !=
+    incomment read ! &&
+    instring read ! && if
+      altchar read tmprow read erow.render . read +
+      state.current read state.syntax . read editorsyntax.scomment . read
+      scslen read
+      (mem.eq) if
+        linecomm 1 put disc
+      end
+    end
+
+    mcslen read 0 != 
+    mcelen read 0 != && 
+    instring read ! && if
+      incomment read
+      copy if
+        altchar read tmprow read erow.hl . read + HL_MLCOMMENT putc disc
+
+        altchar read tmprow read erow.render . read +
+        state.current read state.syntax . read editorsyntax.mcommente . read
+        mcelen read
+        (mem.eq) if
+          altchar copy read mcelen read 1 - + put disc
+          incomment 0 put disc
+          prevsep 1 put disc
+        end
+      end
+      ! 
+      altchar read tmprow read erow.render . read +
+      state.current read state.syntax . read editorsyntax.mcomments . read
+      mcslen read 
+      (mem.eq) && if
+        altchar copy read mcslen read 1 - + put disc
+        incomment 1 put disc
+      end
     end
 
     state.current read state.syntax . read editorsyntax.flags . read
@@ -289,7 +354,11 @@ oper proc updatehi 0 0
     end
     disc
 
-    iscomm read 0 != if
+    linecomm read 0 != if
+      altchar read tmprow read erow.hl . read + HL_COMMENT putc disc
+    end
+
+    incomment read 0 != if
       altchar read tmprow read erow.hl . read + HL_COMMENT putc disc
     end
 
@@ -303,16 +372,34 @@ oper proc updatehi 0 0
   end
   disc
 
+  tmprow read erow.hlopencomment .
+  incomment read
+  covr covr != if
+    tmprow read erow.idx . read 1 + getrow
+    NULL != if
+      tmprow read erow.idx . read 1 + getrow
+      erow.hl . read NULL != if
+        tmprow read erow.idx . read 1 + getrow
+        erow.hl . read (heap.free)
+        
+        tmprow read erow.idx . read 1 + getrow
+        erow.hl . NULL put disc
+      end
+    end
+  end
+  put disc
+
   altchar 0 put disc
 
   ret
 end
 
 oper proc hltocolor 1 1
-  copy HL_NUMBER == if disc 33 ret end
-  copy HL_STRING == if disc 34 ret end
-  copy HL_COMMENT == if disc 36 ret end
-  disc 37
+  copy HL_NUMBER == if disc 3 ret end
+  copy HL_STRING == if disc 2 ret end
+  copy HL_COMMENT == if disc 252 ret end
+  copy HL_MLCOMMENT == if disc 252 ret end
+  disc 7
 
   ret
 end
@@ -463,8 +550,8 @@ oper proc updateft 0 0
 
   tmpstr read str.data . "slm" (cstr.eq) if
     state.current read state.syntax .
-    "$$"
-    "slm" HLF_NUMBERS HLF_STRINGS || editorsyntax.new
+    "{" "}" "$$"
+    "slam" HLF_NUMBERS HLF_STRINGS || editorsyntax.new
     put disc
 
     tmpstr read (str.free)
@@ -474,7 +561,8 @@ oper proc updateft 0 0
 
   tmpstr read str.data . "spk" (cstr.eq) if
     state.current read state.syntax .
-    "spk" HLF_STRINGS editorsyntax.new
+    "{" "}" "$$"
+    "spakig" HLF_STRINGS editorsyntax.new
     put disc
 
     tmpstr read (str.free)
@@ -881,15 +969,29 @@ class renderer
   var abuf int.SIZE
   var leftbuf int.SIZE
   var rightbuf int.SIZE
-  var color int.SIZE
+  var fgcolor int.SIZE
+  var bgcolor int.SIZE
 
-  oper proc setcolor 1 0
-    renderer.color read covr == if disc ret end
-    renderer.color swap put disc
+  oper proc setfgcolor 1 0
+    renderer.fgcolor read covr == if disc ret end
+    renderer.fgcolor swap put disc
 
     renderer.abuf read
-    "\e[" (str.catc)
-    renderer.color read int.cstr (str.catc)
+    "\e[38;5;" (str.catc)
+    renderer.fgcolor read int.cstr (str.catc)
+    "m" (str.catc)
+    renderer.abuf swap put disc
+
+    ret
+  end
+
+  oper proc setbgcolor 1 0
+    renderer.bgcolor read covr == if disc ret end
+    renderer.bgcolor swap put disc
+
+    renderer.abuf read
+    "\e[48;5;" (str.catc)
+    renderer.bgcolor read int.cstr (str.catc)
     "m" (str.catc)
     renderer.abuf swap put disc
 
@@ -900,9 +1002,8 @@ class renderer
     renderer.leftbuf (str.new) put disc
     renderer.rightbuf (str.new) put disc
 
-    renderer.abuf read
-    "\e[7m" (str.catc)
-    renderer.abuf swap put disc
+    253 renderer.setfgcolor
+    252 renderer.setbgcolor
 
     renderer.rightbuf read
     state.current read state.cy . read int.cstr (str.catc)
@@ -991,6 +1092,8 @@ class renderer
         renderer.abuf swap put disc
       end
       copy state.current read state.numrows . read < if
+        tmprow read erow.idx . covr put disc
+        
         updaterow
         updatehi
         tmprow read erow.rsize . read 
@@ -1002,9 +1105,33 @@ class renderer
         end
         
         tmplen read
-        state.current read state.width . read > if
-          tmplen state.current read state.width . read put disc
+        state.current read state.width . read NUMBERLEN - > if
+          tmplen state.current read state.width . read NUMBERLEN - put disc
         end
+
+        0 renderer.setbgcolor
+        7 renderer.setfgcolor
+
+        renderer.abuf read str.size . read NUMBERLEN + 1 -
+        tmprow read erow.idx . read int.cstr cstr.len -
+
+        do
+          renderer.abuf read
+          " " (str.catc)
+          renderer.abuf swap put disc
+
+          renderer.abuf read str.size . read 
+          covr <
+        end
+        disc
+
+        renderer.abuf read
+        tmprow read erow.idx . read int.cstr (str.catc)
+        "│" (str.catc)
+        renderer.abuf swap put disc
+
+        0 renderer.setbgcolor
+        7 renderer.setfgcolor
 
         tmplen read 0 > if
           tmpchar 0 put disc
@@ -1014,14 +1141,17 @@ class renderer
             tmpchar swap putc disc
 
             copy tmprow read erow.hl . read + readc
-            hltocolor renderer.setcolor
+            hltocolor renderer.setfgcolor
             
-            renderer.abuf read
             tmpchar readc iscntrl ! if
+              renderer.abuf read
               tmpchar (str.catc)
+              renderer.abuf swap put disc
             end
             tmpchar readc iscntrl if
-              "\e[7m" (str.catc)
+              7 renderer.setbgcolor
+              0 renderer.setfgcolor
+              renderer.abuf read
               tmpchar readc 26 < if
                 tmpchar readc '@' +
                 altchar swap putc (str.catc)
@@ -1029,16 +1159,16 @@ class renderer
               tmpchar readc 26 < ! if
                 tmpchar '?' putc (str.catc)
               end
-              "\e[m" (str.catc)
+              renderer.abuf swap put disc
+              0 renderer.setbgcolor
+              7 renderer.setfgcolor
             end
-            renderer.abuf swap put disc
 
             1 +
             copy tmplen read <
           end
           disc
         end
-        39 renderer.setcolor
       end
       disc
       renderer.abuf read
@@ -1060,7 +1190,7 @@ class renderer
   end
 
   oper proc movecursor 0 0
-    state.current read state.rx . read 1 +
+    state.current read state.rx . read 1 + NUMBERLEN +
     state.current read state.sx . read -
     state.current read state.cy . read 1 +
     state.current read state.sy . read -
@@ -1587,6 +1717,11 @@ oper proc processkey 1 0
   copy 'o' CTRL == if
     "Open: " prompt
     editoropen
+
+    disc ret
+  end
+  copy 9 == if
+    9 insertchar
 
     disc ret
   end
