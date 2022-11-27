@@ -4,8 +4,9 @@ A text editor written in slam
 
 # todo
 
-- [ ] FIX BUGS
+- [X] FIX BUGS
 - [.] Slam highlighting support
+- [ ] Buffered
 - [ ] Modal?
 - [ ] clear on close 
 - [ ] Better file management

@@ -672,6 +672,9 @@ oper proc editoropen 1 0
     tmpchar readc 0 !=
   end
 
+  state.current read state.cx . 0 put disc
+  state.current read state.cy . 0 put disc
+
   state.current read state.numrows . copy read 1 - put disc
 
   "Opened " setstatus
