@@ -738,7 +738,7 @@ oper proc insertrow 1 0
 
   state.current read state.rows . read tmpat read int.SIZE * +
   state.current read state.rows . read tmpat read 1 + int.SIZE * +
-  state.current read state.numrows . read tmpat read - 1 - int.SIZE *
+  state.current read state.numrows . read tmpat read - int.SIZE *
   movemem
 
   state.current read state.numrows . copy read 1 + put disc
@@ -797,7 +797,7 @@ oper proc delrow 1 0
   state.current read state.rows . read + 
   tmpat read int.SIZE *
   state.current read state.rows . read + 
-  state.current read state.numrows . read tmpat read - 1 - int.SIZE *
+  state.current read state.numrows . read tmpat read - int.SIZE *
   movemem
 
   state.current read state.numrows . copy read 1 - put disc
@@ -1755,7 +1755,7 @@ oper proc main 0 0
   rawmodeon
   getsize
 
-  "HELP: Ctrl-Q = quit" setstatus
+  "Welcome to Sled" setstatus
 
   scroll
   renderer.refreshscreen
