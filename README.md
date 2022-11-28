@@ -1,12 +1,15 @@
-# sled
+# Sled
+
+## About
 
 A text editor written in slam
 
-# todo
+## TO-DO
 
 - [X] FIX BUGS
-- [.] Slam highlighting support
-- [ ] Buffered
-- [ ] Modal?
-- [ ] clear on close 
+- [X] Slam highlighting support
+- [X] Buffered
+- [ ] Fix right key
+- [ ] Modal
 - [ ] Better file management
+- [ ] clear on close 
