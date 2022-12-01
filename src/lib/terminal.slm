@@ -1,0 +1,212 @@
+inc "./lib/terminal.slh"
+
+class terminal
+  oper proc init 0 0
+    terminal.buffer (str.new) put disc
+
+    terminal.getsize
+    screen.width swap put disc
+    screen.height swap put disc
+
+    terminal.buffer read
+    "\e[H" (str.catc)
+    terminal.buffer swap put disc
+
+    ret
+  end
+
+  oper proc getsize 0 2
+    terminal.ws
+    5413h
+    1
+    sysc.IOCTL
+    sys3
+    disc
+
+    terminal.ws winsize.col . read 65535 && 2 -
+    terminal.ws winsize.row . read 65535 &&
+
+    ret
+  end
+
+  oper proc modetostr 1 1
+    copy terminal.MODE_INSERT == if disc "INSERT" ret end
+    copy terminal.MODE_NORMAL == if disc "NORMAL" ret end
+    copy terminal.MODE_VISUAL == if disc "VISUAL" ret end
+    disc "??????"
+
+    ret
+  end
+
+  oper proc keyCTRL 1 1
+    1fh &&
+
+    ret
+  end
+  
+  oper proc iscntrl 1 1
+    copy 32 <
+    swap 126 > ||
+
+    ret
+  end
+
+  oper proc issepr 1 1
+    copy 0 == if disc bool.true ret end
+  
+    tmp.char swap putc disc
+
+    " \t"
+    do
+      copy readc tmp.char readc == if
+        disc bool.true ret
+      end
+
+      1 +
+      copy readc 0 !=
+    end
+    disc
+
+    bool.false
+
+    ret
+  end
+
+  proc setrawmode 1 0
+    if
+      tmp.msc termios.SIZE (heap.zalloc) put disc
+
+      tmp.msc read
+      5401h
+      0
+      sysc.IOCTL
+      sys3
+      disc
+
+      screen.starttermios
+      tmp.msc read termios.SIZE (mem.cpy)
+
+      tmp.msc read termios.iflag .
+      copy read
+      BRKINT ICRNL || INPCK || ISTRIP || IXON || ~ &&
+      put disc
+
+      tmp.msc read termios.oflag .
+      copy read
+      OPOST ~ &&
+      put disc
+
+      tmp.msc read termios.lflag .
+      copy read
+      ECHO ISIG || ICANON || IEXTEN || ~ &&
+      put disc
+
+      tmp.msc read termios.cc . VMIN + 0 putc disc
+      tmp.msc read termios.cc . VTIME + 1 putc disc
+
+      tmp.msc read
+      5404h
+      0
+      sysc.IOCTL
+      sys3
+      disc
+
+      tmp.msc read (heap.free)
+
+      ret
+    end
+    screen.starttermios
+    5404h
+    0
+    sysc.IOCTL
+    sys3
+    disc
+    
+    ret
+  end
+
+  oper proc setcursor 1 0
+    if
+      terminal.buffer read
+      "\e[?25h" (str.catc)
+      terminal.buffer swap put disc
+    end
+    terminal.buffer read
+    "\e[?25l" (str.catc)
+    "\e[H" (str.catc)
+    terminal.buffer swap put disc
+
+    ret
+  end
+
+  oper proc setfgcolor 1 0
+    terminal.fgcolor read covr == if disc ret end
+    terminal.fgcolor swap put disc
+
+    terminal.buffer read
+    "\e[38;5;" (str.catc)
+    terminal.fgcolor read int.cstr (str.catc)
+    "m" (str.catc)
+    terminal.buffer swap put disc
+
+    ret
+  end
+
+  oper proc setbgcolor 1 0
+    terminal.bgcolor read covr == if disc ret end
+    terminal.bgcolor swap put disc
+
+    terminal.buffer read
+    "\e[48;5;" (str.catc)
+    terminal.bgcolor read int.cstr (str.catc)
+    "m" (str.catc)
+    terminal.buffer swap put disc
+
+    ret
+  end
+  
+  oper proc write 1 0
+    terminal.buffer read
+    swap (str.catc)
+    terminal.buffer swap put disc
+
+    ret
+  end
+
+  oper proc movecursor 1 0
+    tmp.buff swap put disc
+
+    tmp.buff read buffer.rx . read 1 + buffer.NUMBERCOL +
+    tmp.buff read buffer.sx . read -
+    tmp.buff read buffer.cy . read 1 +
+    tmp.buff read buffer.sy . read -
+
+    terminal.buffer read
+    "\e[" (str.catc)
+    swap int.cstr (str.catc)
+    ";" (str.catc)
+    swap int.cstr (str.catc)
+    "H" (str.catc)
+    terminal.buffer swap put disc
+
+    ret
+  end
+
+  oper proc flushbuffer 0 0
+    terminal.buffer read
+    (str.print)
+    
+    terminal.buffer read
+    (str.free)
+
+    terminal.buffer
+    (str.new)
+    put disc
+
+    terminal.buffer read
+    "\e[H" (str.catc)
+    terminal.buffer swap put disc
+
+    ret
+  end
+end

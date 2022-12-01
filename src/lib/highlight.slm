@@ -1,0 +1,62 @@
+inc "./lib/highlight.slh"
+
+class hi
+  oper proc iskw 2 1
+    swap tmp.msc swap put disc
+
+    do
+      tmp.msc read
+      covr
+      copy cstr.len
+      (mem.eq) if
+        copy cstr.len
+        swap disc
+        ret
+      end
+      copy cstr.len + 1 +
+
+      copy readc 0 !=
+    end
+    disc
+
+    0
+
+    ret
+  end
+
+  oper proc hltocolor 1 1
+    copy hi.HL_NUMBER == if disc 3 ret end
+    copy hi.HL_STRING == if disc 2 ret end
+    copy hi.HL_KEYWORD1 == if disc 4 ret end
+    copy hi.HL_KEYWORD2 == if disc 5 ret end
+    copy hi.HL_CALL == if disc 4 ret end
+    copy hi.HL_COMMENT == if disc 252 ret end
+    copy hi.HL_MLCOMMENT == if disc 252 ret end
+    disc 7
+
+    ret
+  end
+end
+
+class syntax
+  oper proc new 6 1
+    tmp.msc 
+    int.SIZE 6 *
+    (heap.zalloc)
+    put disc
+
+    tmp.msc read syntax.flags . swap put disc
+    tmp.msc read syntax.name . swap put disc
+    tmp.msc read syntax.scomment . swap put disc
+    tmp.msc read syntax.mcommente . swap put disc
+    tmp.msc read syntax.mcomments . swap put disc
+
+    tmp.msc read syntax.kw2 . swap put disc
+    tmp.msc read syntax.kw1 . swap put disc
+
+    tmp.msc read 
+
+    ret
+  end
+end
+

@@ -12,4 +12,4 @@ A text editor written in slam
 - [ ] Fix right key
 - [ ] Modal
 - [ ] Better file management
-- [ ] clear on close 
+- [ ] clear on close

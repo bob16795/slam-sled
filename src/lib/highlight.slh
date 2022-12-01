@@ -1,0 +1,36 @@
+inc "stdlib.slm"
+inc "./lib/tmp.slh"
+
+class hi
+  const HLF_NUMBERS 1
+  const HLF_STRINGS 2
+  const HLF_CALLS 4
+
+  enum
+  0   HL_NORMAL
+      HL_COMMENT
+      HL_MLCOMMENT
+      HL_KEYWORD1
+      HL_KEYWORD2
+      HL_NUMBER
+      HL_STRING
+      HL_CALL
+  end
+
+  head oper proc hltocolor 1 1
+end
+
+class syntax
+  prop name int.SIZE
+  prop flags int.SIZE
+  prop scomment int.SIZE
+  prop mcomments int.SIZE
+  prop mcommente int.SIZE
+
+  prop kw1 int.SIZE
+  prop kw2 int.SIZE
+
+  head oper proc iskw 2 1
+
+  head oper proc new 6 1
+end

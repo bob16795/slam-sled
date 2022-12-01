@@ -1,0 +1,403 @@
+inc "./lib/row.slh"
+
+class erow
+  oper proc updaterender 1 0
+
+    tmp.row swap put disc
+
+    tmp.row read erow.render . read NULL != if
+      ret
+    end
+
+    tmp.str (str.new) put disc
+    tmp.char2 0 put disc
+
+    0
+    do
+      copy tmp.row read erow.chars . read + readc
+      tmp.char2 swap putc disc
+
+      tmp.char2 readc 9 == if
+        tmp.str read
+        do
+          " " (str.catc)
+
+          copy str.size . read erow.TABSIZE /% swap disc 0 !=
+        end
+        tmp.str swap put disc
+      end
+      tmp.char2 readc 9 != if
+        tmp.str read
+        tmp.char2 (str.catc)
+        tmp.str swap put disc
+      end
+      
+      1 +
+      copy tmp.row read erow.size . read <
+    end
+    disc
+
+    tmp.char2 0 put disc
+
+    tmp.row read erow.rsize .
+    tmp.str read str.size . read 1 -
+    put disc
+    
+    tmp.row read erow.render .
+    tmp.str read str.size . read
+    (heap.zalloc)
+    put disc
+
+    tmp.row read erow.render . read
+    tmp.str read str.data .
+    tmp.str read str.size . read
+    (mem.cpy)
+
+    tmp.row read erow.resethi
+    
+    tmp.str read (str.free)
+
+    ret
+  end
+
+  oper proc updatehi 1 0
+
+    tmp.row swap put disc
+
+    tmp.row read erow.hl . read NULL != if
+
+      ret
+    end
+
+    tmp.row read erow.hl .
+    tmp.row read erow.rsize . read (heap.zalloc)
+    put disc
+
+    buffer.current read buffer.syntax . read NULL == if
+      ret
+    end
+
+    tmp.row read erow.idx . read 0 != if
+      buffer.current read
+      tmp.row read erow.idx . read 1 -
+      buffer.getrow erow.hlopencomment . read
+      erow.incomment swap put disc
+    end
+
+    erow.prevsep 1 put disc
+    erow.instring 0 put disc
+    erow.linecomm 0 put disc
+    erow.incall 0 put disc
+    erow.prevhl hi.HL_NORMAL put disc
+
+    erow.scslen 
+    buffer.current read buffer.syntax . read syntax.scomment . read
+    copy NULL != if cstr.len end
+    put disc
+
+    erow.mcslen
+    buffer.current read buffer.syntax . read syntax.mcomments . read
+    copy NULL != if cstr.len end
+    put disc
+
+    erow.mcelen 
+    buffer.current read buffer.syntax . read syntax.mcommente . read
+    copy NULL != if cstr.len end
+    put disc
+
+    0
+    do
+      tmp.char2 swap put disc
+
+      erow.scslen read 0 !=
+      erow.incomment read ! &&
+      erow.instring read ! && if
+        tmp.char2 read tmp.row read erow.render . read +
+        buffer.current read buffer.syntax . read syntax.scomment . read
+        erow.scslen read
+        (mem.eq) if
+          erow.linecomm 1 put disc
+        end
+      end
+
+      erow.mcslen read 0 != 
+      erow.mcelen read 0 != && 
+      erow.instring read ! && if
+        erow.incomment read
+        copy if
+          tmp.char2 read tmp.row read erow.hl . read + hi.HL_MLCOMMENT putc disc
+
+          tmp.char2 read tmp.row read erow.render . read +
+          buffer.current read buffer.syntax . read syntax.mcommente . read
+          erow.mcelen read
+          (mem.eq) if
+            tmp.char2 copy read erow.mcelen read 1 - + put disc
+            erow.incomment 0 put disc
+            erow.prevsep 1 put disc
+          end
+        end
+        ! 
+        tmp.char2 read tmp.row read erow.render . read +
+        buffer.current read buffer.syntax . read syntax.mcomments . read
+        erow.mcslen read 
+        (mem.eq) && if
+          tmp.char2 copy read erow.mcslen read 1 - + put disc
+          erow.incomment 1 put disc
+        end
+      end
+
+      erow.prevsep read
+      erow.instring read ! &&
+      if
+        tmp.char2 read tmp.row read erow.render . read +
+        buffer.current read buffer.syntax . read syntax.kw1 . read
+        hi.iskw
+        copy if
+          tmp.char2 read tmp.row read erow.render . read + covr + readc
+          terminal.issepr if
+            copy
+            tmp.char2 read tmp.row read erow.hl . read + swap
+            hi.HL_KEYWORD1 swap
+            (mem.set)
+          end
+        end
+        disc
+
+        tmp.char2 read tmp.row read erow.render . read +
+        buffer.current read buffer.syntax . read syntax.kw2 . read
+        hi.iskw
+        copy if
+          tmp.char2 read tmp.row read erow.render . read + covr + readc
+          terminal.issepr if
+            copy
+            tmp.char2 read tmp.row read erow.hl . read + swap
+            hi.HL_KEYWORD2 swap
+            (mem.set)
+          end
+        end
+        disc
+      end
+
+      buffer.current read buffer.syntax . read syntax.flags . read
+      copy hi.HLF_NUMBERS && if
+        tmp.char2 read tmp.row read erow.render . read + readc 
+        copy '0' < ! swap '9' > ! &&
+        erow.prevsep read
+        erow.prevhl read hi.HL_NUMBER == || &&
+        if 
+          tmp.char2 read tmp.row read erow.hl . read + hi.HL_NUMBER putc disc
+        end
+
+        erow.prevhl
+        tmp.char2 read tmp.row read erow.hl . read + readc
+        put disc
+      end
+      copy hi.HLF_STRINGS && if
+        erow.instring read
+        copy if
+          tmp.char2 read tmp.row read erow.hl . read + hi.HL_STRING putc disc
+          tmp.char2 read tmp.row read erow.render . read + readc 
+          erow.instring read == if
+            erow.instring 0 put disc
+          end
+          erow.prevsep 1 put disc
+        end
+        0 == if
+          tmp.char2 read tmp.row read erow.render . read + readc 
+          copy '"' ==
+          covr '`' == ||
+          covr ''' == || if
+            erow.instring
+            covr
+            put disc
+            tmp.char2 read tmp.row read erow.hl . read + hi.HL_STRING putc disc
+          end
+          disc
+        end
+      end
+      copy hi.HLF_CALLS && if
+        erow.incall read
+        copy if
+          tmp.char2 read tmp.row read erow.hl . read + hi.HL_CALL putc disc
+          tmp.char2 read tmp.row read erow.render . read + readc 
+          erow.incall read == if
+            erow.incall 0 put disc
+          end
+          erow.prevsep 1 put disc
+        end
+        0 == if
+          tmp.char2 read tmp.row read erow.render . read + readc 
+          copy '(' == if
+            erow.incall
+            ')'
+            put disc
+            tmp.char2 read tmp.row read erow.hl . read + hi.HL_CALL putc disc
+          end
+          disc
+        end
+      end
+      disc
+
+      erow.linecomm read 0 != if
+        tmp.char2 read tmp.row read erow.hl . read + hi.HL_COMMENT putc disc
+      end
+
+      erow.incomment read 0 != if
+        tmp.char2 read tmp.row read erow.hl . read + hi.HL_COMMENT putc disc
+      end
+
+      erow.prevsep
+      tmp.char2 read tmp.row read erow.render . read + readc terminal.issepr
+      put disc
+
+      tmp.char2 read 1 +
+      tmp.char2 read
+      tmp.row read erow.rsize . read <
+    end
+    disc
+
+    tmp.row read erow.hlopencomment .
+    erow.incomment read
+    covr covr != if
+      buffer.current read
+      tmp.row read erow.idx . read 1 + buffer.getrow
+      NULL != if
+        buffer.current read
+        tmp.row read erow.idx . read 1 + buffer.getrow
+        erow.hl . read NULL != if
+          buffer.current read
+          tmp.row read erow.idx . read 1 + buffer.getrow
+          erow.hl . read (heap.free)
+          
+          buffer.current read
+          tmp.row read erow.idx . read 1 + buffer.getrow
+          erow.hl . NULL put disc
+        end
+      end
+    end
+    put disc
+
+    tmp.char2 0 put disc
+
+    ret
+  end
+
+  oper proc resetrender 1 0
+    tmp.row swap put disc
+
+    tmp.row read erow.render . read NULL != if
+      tmp.row read erow.render . read (heap.free)
+      tmp.row read erow.render . NULL put disc
+    end
+
+    buffer.current read buffer.dirty . copy read 1 + put disc
+
+    ret
+  end
+
+  oper proc resethi 1 0
+    tmp.row swap put disc
+
+    tmp.row read erow.hl . read NULL != if
+      tmp.row read erow.hl . read (heap.free)
+      tmp.row read erow.hl . NULL put disc
+    end
+
+    buffer.current read buffer.dirty . copy read 1 + put disc
+
+    ret
+  end
+
+  oper proc renderbuff 1 0
+    copy NULL == if
+      disc
+
+      "~\e[K\r\n" terminal.write
+      ret
+    end
+    tmp.row swap put disc
+
+    tmp.row read erow.updaterender
+    tmp.row read erow.updatehi
+    tmp.row read erow.rsize . read 
+    {TODO: tmp.buff}
+    buffer.current read buffer.sx . read - 1 +
+    tmp.size swap put disc
+    
+    tmp.size read 0 < if
+      tmp.size 0 put disc
+    end
+    
+    tmp.size read
+    screen.width read buffer.NUMBERCOL - 1 - > if
+      tmp.size screen.width read buffer.NUMBERCOL - 1 - put disc
+    end
+
+    0 terminal.setbgcolor
+    7 terminal.setfgcolor
+
+    terminal.buffer read str.size . read buffer.NUMBERCOL + 1 -
+    tmp.row read erow.idx . read buffer.rownumber int.cstr cstr.len -
+
+    do
+      " " terminal.write
+
+      terminal.buffer read str.size . read 
+      covr <
+    end
+    disc
+
+    tmp.row read erow.idx . read buffer.rownumber int.cstr terminal.write
+    "│" terminal.write
+
+    0 terminal.setbgcolor
+    7 terminal.setfgcolor
+
+    tmp.size read 0 > if
+      tmp.char 0 put disc
+      0
+      do
+        copy tmp.row read erow.render . read +
+        buffer.current read buffer.sx . read +
+        readc
+        tmp.char swap putc disc
+
+        copy tmp.row read erow.hl . read + readc
+        hi.hltocolor terminal.setfgcolor
+        
+        tmp.char readc terminal.iscntrl ! if
+          tmp.char terminal.write
+        end
+        tmp.char readc terminal.iscntrl if
+          7 terminal.setbgcolor
+          0 terminal.setfgcolor
+          tmp.char readc 26 < if
+            tmp.char readc '@' +
+            tmp.char2 swap putc terminal.write
+          end
+          tmp.char readc 26 < ! if
+            tmp.char '?' putc terminal.write
+          end
+          0 terminal.setbgcolor
+          7 terminal.setfgcolor
+        end
+
+        1 +
+        copy tmp.size read <
+      end
+      disc
+    end
+
+    "\e[K\r\n" terminal.write
+    ret
+  end
+
+  oper proc free 1 0
+    copy erow.chars . read copy NULL != if (heap.free) 0 end disc
+    copy erow.render . read copy NULL != if (heap.free) 0 end disc
+    copy erow.hl . read copy NULL != if (heap.free) 0 end disc
+
+    (heap.free)
+    ret
+  end
+end

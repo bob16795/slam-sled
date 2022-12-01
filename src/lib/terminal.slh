@@ -1,0 +1,71 @@
+inc "stdlib.slm"
+
+const ISIG 1
+const ICANON 2
+const IEXTEN 32768
+const ECHO 8
+const ECHOE 16
+const ECHONL 32
+
+const BRKINT 2
+const INPCK 16
+const ISTRIP 32
+const IXON 1024
+const ICRNL 256
+
+const OPOST 1
+
+const VMIN 6
+const VTIME 5
+
+class termios
+  const NCCS 19
+  prop iflag 4
+  prop oflag 4
+  prop cflag 4
+  prop lflag 4
+
+  prop line 1
+  prop cc termios.NCCS
+end
+
+class winsize
+  prop col 2
+  prop row 2
+  prop _ 8
+end
+
+class screen
+  var width int.SIZE
+  var height int.SIZE
+
+  var starttermios termios.SIZE
+end
+
+class terminal
+  enum
+  0   MODE_NORMAL
+      MODE_INSERT
+      MODE_VISUAL
+  end
+
+  var inputmode int.SIZE
+  var fgcolor int.SIZE
+  var bgcolor int.SIZE
+  var buffer int.SIZE
+  var ws winsize.SIZE
+
+  head oper proc init 0 0
+  head oper proc getsize 0 2
+  head oper proc modetostr 1 1
+  head oper proc keyCTRL 1 1
+  head oper proc iscntrl 1 1
+  head oper proc issepr 1 1
+  head oper proc setrawmode 1 0
+  head oper proc setcursor 1 0
+  head oper proc setfgcolor 1 0
+  head oper proc setbgcolor 1 0
+  head oper proc write 1 0
+  head oper proc movecursor 0 0
+  head oper proc flushbuffer 0 0
+end

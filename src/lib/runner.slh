@@ -1,0 +1,12 @@
+inc "stdlib.slm"
+
+inc "./lib/buffer.slh"
+
+{inc "compiler/simulator.slm"}
+
+class runner
+  head oper proc init 0 0
+
+  head oper proc source 1 0
+  head oper proc run 1 0
+end

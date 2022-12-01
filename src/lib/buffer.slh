@@ -1,0 +1,61 @@
+inc "stdlib.slm"
+inc "stdlib/arrays.slm"
+
+inc "./lib/row.slh"
+inc "./lib/terminal.slh"
+inc "./lib/tmp.slh"
+
+class buffer
+  enum
+  0   BC_UP
+      BC_DOWN
+      BC_LEFT
+      BC_RIGHT
+  end
+
+
+  var buffers int.SIZE
+  var idx int.SIZE
+
+  prop filename int.SIZE
+  prop status int.SIZE
+  
+  prop rx int.SIZE
+
+  prop cx int.SIZE
+  prop cy int.SIZE
+
+  prop sx int.SIZE
+  prop sy int.SIZE
+
+  prop syntax int.SIZE
+  prop dirty bool.SIZE
+
+  prop numrows int.SIZE
+  prop rows int.SIZE
+
+  prop mode int.SIZE
+
+  const NUMBERCOL 6
+
+  head oper proc init 0 0
+  head oper proc add 0 0
+  head oper proc str 1 0
+
+  head oper proc current 0 1
+  head oper proc cnt 0 1
+  head oper proc getrow 2 1
+  head oper proc rownumber 1 1
+
+  head oper proc updatescroll 1 0
+
+  head oper proc setstatus 2 0
+  head oper proc appendstatus 2 0
+  head oper proc open 2 0
+  head oper proc save 2 0
+  head oper proc updateft 1 0
+  head oper proc getrx 1 1
+  head oper proc movecursor 2 0
+
+  head oper proc render 1 0
+end

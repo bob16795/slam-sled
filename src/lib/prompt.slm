@@ -1,0 +1,57 @@
+inc "./lib/prompt.slh"
+
+class prompt
+  oper proc show 1 1
+    prompt.headsize
+    covr cstr.len
+    put disc
+
+    prompt.buffer (str.new) put disc
+
+    prompt.buffer read
+    swap (str.catc)
+    prompt.buffer swap put disc
+
+    do
+      buffer.current read
+      prompt.buffer read str.data . buffer.setstatus
+      
+      {TODO: redraw}
+
+      tmp.char 0 put disc
+      1 tmp.char 0 (os.readf)
+
+      tmp.char readc 13 == if 
+        buffer.current read
+        "" buffer.setstatus
+        disc
+        prompt.buffer read str.data . 
+        prompt.buffer read str.size . read + 0 putc disc 
+        prompt.buffer read str.data . prompt.headsize read +
+        ret
+      end
+      tmp.char readc 'q' terminal.keyCTRL == if
+        disc
+        NULL
+        ret
+      end
+      prompt.buffer read str.size . read 0 !=
+      tmp.char readc 127 == && if
+        prompt.buffer read str.size . copy read 1 - put disc
+        prompt.buffer read str.data . 
+        prompt.buffer read str.size . read + 0 putc disc 
+      end
+      tmp.char readc 32 >
+      tmp.char readc 127 < &&
+      tmp.char readc 0 != && if
+        prompt.buffer read
+        tmp.char (str.catc)
+        prompt.buffer swap put disc
+      end
+
+      1
+    end
+
+    NULL ret
+  end
+end

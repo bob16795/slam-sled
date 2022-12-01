@@ -1,0 +1,222 @@
+inc "./lib/input.slh"
+
+class input
+  oper proc readchar 0 1
+    tmp.char
+    0
+    put disc
+
+    do
+      1 tmp.char 0 (os.readf)
+      
+      -1 ==
+    end
+
+    tmp.char readc
+    copy 27 == if
+      1 tmp.char 0 (os.readf)
+      tmp.char readc
+
+      copy '[' == if
+        1 tmp.char 0 (os.readf)
+        tmp.char readc
+
+        copy 'A' == if 
+          disc disc disc
+          input.EK_ARROW_UP ret
+        end
+        copy 'B' == if 
+          disc disc disc
+          input.EK_ARROW_DOWN ret
+        end
+        copy 'C' == if 
+          disc disc disc
+          input.EK_ARROW_RIGHT ret
+        end
+        copy 'D' == if 
+          disc disc disc
+          input.EK_ARROW_LEFT ret
+        end
+        copy 'H' == if 
+          disc disc disc
+          input.EK_HOME ret
+        end
+        copy 'D' == if 
+          disc disc disc
+          input.EK_END ret
+        end
+        copy 'P' == if 
+          disc disc disc
+          input.EK_DEL ret
+        end
+
+        copy '1' == if
+          1 tmp.char 0 (os.readf)
+          tmp.char readc
+          copy '~' == if 
+            disc disc disc disc
+            input.EK_HOME ret
+          end
+          disc
+        end
+        copy '3' == if
+          1 tmp.char 0 (os.readf)
+          tmp.char readc
+          copy '~' == if 
+            disc disc disc disc
+            input.EK_DEL ret
+          end
+          disc
+        end
+        copy '4' == if
+          1 tmp.char 0 (os.readf)
+          tmp.char readc
+          copy '~' == if 
+            disc disc disc disc
+            input.EK_END ret
+          end
+          disc
+        end
+        copy '5' == if
+          1 tmp.char 0 (os.readf)
+          tmp.char readc
+          copy '~' == if 
+            disc disc disc disc
+            input.EK_PAGE_UP ret
+          end
+          disc
+        end
+        copy '6' == if
+          1 tmp.char 0 (os.readf)
+          tmp.char readc
+          copy '~' == if 
+            disc disc disc disc
+            input.EK_PAGE_DOWN ret
+          end
+          disc
+        end
+        disc
+      end
+      copy 'O' == if
+        1 tmp.char 0 (os.readf)
+        tmp.char readc
+
+        copy 'H' == if 
+          disc disc disc
+          input.EK_HOME ret
+        end
+        copy 'D' == if 
+          disc disc disc
+          input.EK_END ret
+        end
+        disc
+      end
+      disc
+    end
+
+    ret
+  end
+
+  oper proc processkey 1 0
+    copy 'o' terminal.keyCTRL == if
+      "Open: " prompt.show
+      copy NULL == if disc disc ret end
+
+      buffer.current read
+      buffer.open
+
+      disc ret
+    end
+    copy 's' terminal.keyCTRL == if
+      buffer.current read
+      buffer.save
+
+      disc ret
+    end
+    copy 'r' terminal.keyCTRL == if
+      ">> " prompt.show
+      copy NULL == if disc disc ret end
+
+      runner.run
+
+      disc ret
+    end
+    copy 'q' terminal.keyCTRL == if
+      "\e[2J" cstr.print
+      "\e[H" cstr.print
+
+      bool.false
+      terminal.setrawmode
+      
+      0 quit
+    end
+    copy 13 == if
+      buffer.current read
+      editor.insertreturn
+
+      disc ret
+    end
+    copy input.EK_BACKSPACE == if
+      buffer.current read
+      copy buffer.cx . read 1 -
+      editor.delchar
+
+      disc ret
+    end
+    copy 'h' terminal.keyCTRL == if
+      buffer.current read
+      copy buffer.cx . read 1 -
+      editor.delchar
+
+      disc ret
+    end
+    copy input.EK_DEL == if
+      buffer.current read
+      buffer.BC_RIGHT
+      buffer.movecursor
+
+      buffer.current read
+      copy buffer.cx . read 1 -
+      editor.delchar
+
+      disc ret
+    end
+    copy input.EK_ARROW_UP == if 
+      buffer.current read
+      buffer.BC_UP
+      buffer.movecursor
+
+      disc ret
+    end
+    copy input.EK_ARROW_DOWN == if 
+      buffer.current read
+      buffer.BC_DOWN
+      buffer.movecursor
+
+      disc ret
+    end
+    copy input.EK_ARROW_LEFT == if 
+      buffer.current read
+      buffer.BC_LEFT
+      buffer.movecursor
+
+      disc ret
+    end
+    copy input.EK_ARROW_RIGHT == if 
+      buffer.current read
+      buffer.BC_RIGHT
+      buffer.movecursor
+
+      disc ret
+    end
+    copy terminal.iscntrl
+    covr 'l' terminal.keyCTRL == ||
+    covr 27 == || if
+      disc ret
+    end
+    buffer.current read swap
+    editor.insertchar
+
+    ret
+  end
+end

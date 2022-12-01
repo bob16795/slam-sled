@@ -1,0 +1,104 @@
+inc "./lib/runner.slh"
+
+class runner
+  oper proc init 0 0
+
+    ret
+  end
+
+  oper proc source 1 0
+    disc
+
+    {
+    bool.false
+    (lexer.new) (lexer.run)
+    (parser.new) (parser.runinside)
+    (simulator.visitnode)
+    simulator.SUCCESS != if
+      buffer.current read
+      "ERROR: could not source file" buffer.setstatus
+
+      ret
+    end
+
+    buffer.current read
+    "SUCCESS:" buffer.setstatus
+
+    simulator.simstack read
+    do
+      0
+      covr (dlist.pop)
+      copy NULL != if
+        read
+
+        buffer.current read
+        " " buffer.appendstatus
+
+        copy simstackentry.kind . read
+        copy simstackentry.SE_NUMBER == if
+          disc
+          copy simstackentry.data . read int.cstr
+          buffer.current read swap
+          buffer.appendstatus
+
+          -1
+        end
+        -1 != if
+          disc
+          buffer.current read
+          "?" buffer.appendstatus
+        end
+        disc
+        disc
+
+        0 1
+      end
+      disc
+    end
+    disc
+    }
+
+    ret
+  end
+  
+  oper proc run 1 0
+    disc
+    {
+
+    tmp.str swap put disc
+
+    511
+    65
+    "/tmp/runner.slm"
+    -100
+    (os.open)
+    tmp.fp swap put disc
+
+    tmp.str read cstr.len
+    tmp.fp read
+    77
+    sys2
+    disc
+
+    tmp.str read str.println
+
+    tmp.str read cstr.len
+    tmp.str read
+    tmp.fp read
+    (os.write)
+
+    ` `
+    tmp.fp read
+    (os.write)
+
+    tmp.str read (str.free)
+
+    tmp.fp read
+    (os.close)
+
+    "/tmp/runner.slm" runner.source
+    }
+
+    ret
+  end
+end

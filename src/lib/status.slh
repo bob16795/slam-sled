@@ -1,0 +1,17 @@
+inc "stdlib.slm"
+inc "./lib/buffer.slh"
+
+class status
+  prop leftbuf int.SIZE
+  prop rightbuf int.SIZE
+  prop centerbuf int.SIZE
+
+  var status int.SIZE
+
+  head oper proc init 0 0
+
+  head oper proc updateleft 0 0
+  head oper proc updatecenter 0 0
+  head oper proc updateright 0 0
+  head oper proc render 0 0
+end

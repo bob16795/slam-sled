@@ -1,0 +1,145 @@
+inc "./lib/status.slh"
+
+class status
+  oper proc init 0 0
+    status.status
+    status.SIZE (heap.alloc)
+    put disc
+
+    status.status read status.leftbuf . (str.new) put disc
+    status.status read status.rightbuf . (str.new) put disc
+    status.status read status.centerbuf . (str.new) put disc
+
+    ret
+  end
+
+  oper proc updateleft 0 0
+    status.status read status.leftbuf . read
+    ` ` (str.sput)
+    buffer.current read
+    buffer.mode . read
+    terminal.modetostr (str.catc)
+    " ┃" (str.catc)
+    status.status read status.leftbuf . swap put disc
+
+    buffer.cnt 1 > if
+      0
+      do
+        buffer.buffers read
+        covr
+        (dlist.ptrat)
+        copy NULL == if disc brk end
+        read buffer.filename .
+        copy NULL != if read end
+        covr
+        
+        status.status read status.leftbuf . read
+        " " (str.catc)
+        covr int.cstr (str.catc)
+        ":" (str.catc)
+        swap buffer.idx read == " " swap if
+          disc "_"
+        end (str.catc)
+        swap (str.catc)
+        covr buffer.idx read == " " swap if
+          disc "_"
+        end (str.catc)
+        status.status read status.leftbuf . swap put disc
+
+        1 +
+        1
+      end
+      disc
+      status.status read status.leftbuf . read
+      " ┃ " (str.catc)
+      status.status read status.leftbuf . swap put disc
+    end
+
+    status.status read status.leftbuf . read
+    "[NO NAME]"
+    buffer.current read buffer.filename . read NULL != if
+      disc buffer.current read buffer.filename . read
+    end (str.catc)
+    buffer.current read buffer.dirty . read if
+      " (modified)" (str.catc)
+    end
+    status.status read status.leftbuf . swap put disc
+
+    ret
+  end
+
+  oper proc updatecenter 0 0
+    status.status read status.centerbuf . read
+    ` ` (str.sput)
+    status.status read status.centerbuf . swap put disc
+
+    ret
+  end
+
+  oper proc updateright 0 0
+    status.status read status.rightbuf . read
+    ` ` (str.sput)
+    buffer.current read buffer.cy . read int.cstr (str.catc)
+    "/" (str.catc)
+    buffer.current read buffer.numrows . read int.cstr (str.catc)
+    " " (str.catc)
+    "no ft"
+    buffer.current read buffer.syntax . read NULL != if
+      disc buffer.current read buffer.syntax . read syntax.name . read
+    end (str.catc)
+    status.status read status.rightbuf . swap put disc
+
+    ret
+  end
+
+  oper proc render 0 0
+    status.updateleft
+    status.updatecenter
+    status.updateright
+
+    253 terminal.setfgcolor
+    252 terminal.setbgcolor
+
+    status.status read status.leftbuf . read str.size . read
+    screen.width read  >
+    if
+      status.status read status.leftbuf .  read str.size . 
+      screen.width read 
+      put disc
+
+      status.status read status.leftbuf .  read str.size . read 1 + 
+      status.status read status.leftbuf .  read str.data . +
+      0 putc disc
+    end
+
+    status.status read status.leftbuf . read str.data . terminal.write
+
+    {TODO: render center}
+
+    status.status read status.leftbuf . read str.size . read
+    copy
+    screen.width read  != if
+      do
+        " " terminal.write
+
+        1 +
+        copy 2 -
+        status.status read status.rightbuf . read str.size . read +
+        screen.width read == if
+          status.status read status.rightbuf . read str.data . terminal.write
+
+          brk
+        end
+        copy screen.width read  <
+      end
+    end
+    disc
+
+    "\e[m\r\n\e[K" terminal.write
+    0 terminal.setbgcolor
+    7 terminal.setfgcolor
+    buffer.current read buffer.status . read str.data . terminal.write
+
+    ret
+  end
+end

@@ -1,0 +1,8 @@
+inc "stdlib.slm"
+
+class prompt
+  var buffer int.SIZE
+  var headsize int.SIZE
+
+  head oper proc show 1 1
+end

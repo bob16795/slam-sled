@@ -1,0 +1,13 @@
+inc "./lib/row.slh"
+inc "stdlib/mem.slm"
+inc "stdlib.slm"
+
+class editor
+  head oper proc insertchar 2 0
+  head oper proc insertrow 2 0
+  head oper proc insertreturn 1 0
+  head oper proc appendrow 2 0
+
+  head oper proc delrow 2 0
+  head oper proc delchar 2 0
+end

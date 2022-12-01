@@ -1,0 +1,27 @@
+inc "stdlib.slm"
+
+inc "./lib/tmp.slh"
+inc "./lib/prompt.slh"
+inc "./lib/buffer.slh"
+inc "./lib/editor.slh"
+inc "./lib/runner.slh"
+inc "./lib/terminal.slh"
+
+class input
+  enum
+  127 EK_BACKSPACE
+
+  500 EK_ARROW_LEFT
+      EK_ARROW_RIGHT
+      EK_ARROW_UP
+      EK_ARROW_DOWN
+      EK_DEL
+      EK_PAGE_UP
+      EK_PAGE_DOWN
+      EK_HOME
+      EK_END
+  end
+
+  head oper proc readchar 0 1
+  head oper proc processkey 1 0
+end

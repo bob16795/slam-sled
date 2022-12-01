@@ -1,0 +1,520 @@
+inc "./lib/buffer.slh"
+
+class buffer
+  oper proc init 0 0
+    buffer.buffers int.SIZE (dlist.new) put disc
+    buffer.buffers read
+    buffer.SIZE (heap.zalloc)
+    tmp.char swap put
+    (dlist.append)
+    disc
+    
+    tmp.char 0 put disc
+
+    buffer.current read buffer.rows .
+    0 (heap.zalloc)
+    put disc
+
+    buffer.current read buffer.status . (str.new) put disc
+
+    ret
+  end
+
+  oper proc add 0 0
+    buffer.buffers read
+    buffer.SIZE (heap.zalloc)
+    tmp.char swap put
+    (dlist.append)
+    dlist.size . read 1 -
+    buffer.idx swap put disc
+    
+    tmp.char 0 put disc
+
+    buffer.current read buffer.rows .
+    0 (heap.zalloc)
+    put disc  
+
+    buffer.current read buffer.status . (str.new) put disc
+
+    ret
+  end
+
+  oper proc str 1 0
+    tmp.buff swap put disc
+
+    tmp.ln (str.new) put disc
+
+    0
+    tmp.buff read buffer.numrows . read 1 -
+    range.for : 1 0
+      tmp.buff read
+      swap read
+      buffer.getrow
+      tmp.row swap put disc
+
+      tmp.row read NULL == if ret end
+
+      tmp.row read erow.chars . read
+      tmp.row read erow.size . read + 0 putc disc
+
+      tmp.ln read
+      tmp.row read erow.chars . read (str.catc)
+      "\n" (str.catc)
+      tmp.ln swap put disc
+
+      ret
+    end
+
+    ret
+  end
+
+  oper proc current 0 1
+    buffer.buffers read
+    buffer.idx read
+    (dlist.ptrat)
+
+    ret
+  end
+  
+  oper proc cnt 0 1
+    buffer.buffers read
+    (dlist.len)
+
+    ret
+  end
+
+  oper proc getrow 2 1
+    swap tmp.buff swap put disc
+
+    copy tmp.buff read buffer.numrows . read > if
+      disc
+      NULL
+      ret
+    end
+
+    int.SIZE *
+    tmp.buff read 
+    buffer.rows . read + read
+
+    ret
+  end
+
+  oper proc setstatus 2 0
+    swap tmp.msc swap put disc
+
+    tmp.msc read buffer.status . read swap
+    copy cstr.len swap (str.sput)
+    tmp.msc read buffer.status . swap put disc
+
+    ret
+  end
+
+  oper proc appendstatus 2 0
+    swap tmp.msc swap put disc
+
+    tmp.msc read buffer.status . read swap
+    (str.catc)
+    tmp.msc read buffer.status . swap put disc
+
+    ret
+  end
+
+  oper proc rownumber 1 1
+    1 +
+
+    ret
+  end
+
+  oper proc open 2 0
+    swap tmp.buff swap put disc
+
+    {
+    tmp.buff read buffer.filename . read NULL !=
+    tmp.buff read buffer.dirty . read 0 != ||
+    if
+      buffer.add
+
+      buffer.current read tmp.buff swap put disc
+    end
+    }
+
+    copy tmp.buff read buffer.filename . swap put disc
+
+    (filestream.new)
+    tmp.fp swap put disc
+
+    tmp.fp read NULL == if
+      tmp.buff read
+      "" editor.insertrow
+
+      ret
+    end
+
+    {TODO: Extract}
+
+    0
+    do
+      tmp.buff read 
+      covr buffer.getrow NULL == if brk end
+
+      tmp.buff read
+      covr buffer.getrow erow.free
+      
+      1 +
+
+      1  
+    end
+    disc
+  
+    tmp.buff read buffer.numrows . 0 put disc
+
+    do
+      tmp.ln (str.new) put disc
+      tmp.char 0 put disc
+      do
+        tmp.char
+        tmp.fp read (filestream.readchar)
+        putc disc
+
+        tmp.char readc
+        copy 10 == if
+          disc
+          brk
+        end
+        copy 13 == if
+          disc
+          brk
+        end
+        copy 0 == if
+          disc
+          brk
+        end
+        disc
+        
+        tmp.ln read
+        tmp.char (str.catc)
+        tmp.ln swap put disc 
+
+        1
+      end
+      tmp.char readc 0 ==
+      tmp.ln read str.size . read 0 == && !
+      if
+        tmp.buff read
+        tmp.ln read str.data . editor.insertrow
+        tmp.buff read buffer.cy . copy read 1 + put disc
+      end
+
+      tmp.ln read (str.free) 
+      
+      tmp.char readc 0 !=
+    end
+
+    tmp.buff read buffer.cx . 0 put disc
+    tmp.buff read buffer.cy . 0 put disc
+
+    tmp.buff read
+    "Opened " buffer.setstatus
+    tmp.buff read
+    tmp.buff read buffer.filename . read buffer.appendstatus
+
+    tmp.buff read
+    buffer.updateft
+
+    ret
+  end
+
+  oper proc save 1 0
+    swap tmp.buff swap put disc
+
+    tmp.buff read buffer.filename . read NULL == if
+      "Save As: " prompt.show
+      copy NULL == if disc ret end
+
+      tmp.buff read buffer.filename . swap put disc
+
+      buffer.updateft
+    end
+    
+    tmp.buff read buffer.str
+
+    511
+    65
+    tmp.buff read buffer.filename . read
+    -100
+    (os.open)
+    tmp.fp swap put disc
+
+    tmp.ln read str.size . read
+    tmp.fp read
+    77
+    sys2
+    disc
+
+    tmp.ln read str.size . read
+    tmp.ln read str.data . 
+    tmp.fp read
+    (os.write)
+
+    tmp.fp read
+    (os.close)
+
+    tmp.ln read str.size . read
+    tmp.buff read
+    "Wrote " buffer.setstatus
+    tmp.buff read
+    swap int.cstr buffer.appendstatus
+    tmp.buff read
+    " bytes" buffer.appendstatus
+
+    tmp.ln read (str.free)
+
+    tmp.buff read buffer.dirty . 0 put disc
+
+    ret
+  end
+
+  oper proc updateft 1 0
+    tmp.buff swap put disc
+
+    tmp.str (str.new) put disc
+
+    tmp.char 0 put disc
+
+    tmp.buff read buffer.filename . read
+    do
+      tmp.char
+      covr readc
+      putc disc
+
+      tmp.str read
+      tmp.char (str.catc)
+      tmp.str swap put disc
+
+      tmp.char readc '.' == if
+        tmp.str read str.size . 0 put disc
+      end
+
+      1 +
+      copy readc 0 !=
+    end
+    disc
+
+    0
+    do
+      tmp.buff read
+      covr buffer.getrow NULL == if brk end
+      
+      tmp.buff read
+      covr buffer.getrow
+      erow.resetrender
+      
+      1 +
+
+      1  
+    end
+    disc
+
+    tmp.str read str.data .
+    tmp.str read str.size . read + 0 putc disc
+
+    tmp.str read str.data . "slm" (cstr.eq) if
+      tmp.buff read buffer.syntax .
+      "brk\0nop\0ret\0asm\0quit\0copy\0covr\0readc\0read\0putc\0put\0disc\0argv\0argc\0envp\0of\0temp\0push\0oper\0-\0*\0,\0/%\0+\0^\0!=\0!\0==\0<\0>\0&&\0~\0()\0sys0\0sys1\0sys2\0sys3\0sys4\0sys5\0sys6\0"
+      "sim\0lambda\0swap\0dump\0const\0if\0proc\0do\0end\0inc\0enum\0var\0prop\0class\0cproc\0lnk\0"
+      "{" "}" "$$"
+      "slam" hi.HLF_NUMBERS hi.HLF_CALLS || hi.HLF_STRINGS || syntax.new
+      put disc
+
+      tmp.str read (str.free)
+
+      ret
+    end
+
+    tmp.str read str.data . "spk" (cstr.eq) if
+      tmp.buff read buffer.syntax .
+      "\0"
+      "src\0lib\0libd\0"
+      "{" "}" "$$"
+      "spakig" hi.HLF_STRINGS syntax.new
+      put disc
+
+      tmp.str read (str.free)
+
+      ret
+    end
+
+    tmp.str read (str.free)
+
+    ret
+  end
+
+  oper proc getrx 1 1
+    tmp.row
+    buffer.current read
+    copy buffer.cy . read
+    buffer.getrow
+    put disc
+
+    tmp.size 0 put disc
+
+    0
+    swap 1 -
+    range.for : 1 0
+      tmp.char2 0 put disc
+      read tmp.row read erow.chars . read + readc
+      tmp.char2 swap putc disc
+
+      tmp.char2 readc 9 == if
+        do
+          tmp.size copy read 1 + put disc
+
+          tmp.size read erow.TABSIZE /% swap disc 0 !=
+        end
+        ret
+      end
+      tmp.size copy read 1 + put disc
+
+      ret
+    end
+
+    tmp.size read
+
+    ret
+  end
+
+  oper proc movecursor 2 0
+    swap tmp.buff swap put disc
+
+    copy buffer.BC_UP == if
+      tmp.buff read buffer.cy . read 0 > if
+        tmp.buff read buffer.cy . copy read 1 - put disc
+      end
+    end
+    copy buffer.BC_DOWN == if 
+      tmp.buff read buffer.cy . read
+      tmp.buff read buffer.numrows . read 1 - < if
+        tmp.buff read buffer.cy . copy read 1 + put disc
+      end
+    end
+    copy buffer.BC_LEFT == if
+      tmp.buff read buffer.cx . read 0 != if 
+        disc
+        tmp.buff read buffer.cx . copy read 1 - put disc
+
+        ret
+      end
+      tmp.buff read buffer.cy . read 0 > if 
+        tmp.buff read buffer.cy . copy read 1 - put disc
+        
+        tmp.buff read buffer.cx .
+        tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read
+        put disc
+        
+      end
+    end
+    copy buffer.BC_RIGHT == if
+      tmp.buff read copy buffer.cy . read buffer.getrow
+      NULL != if
+        tmp.buff read buffer.cx . read 
+        tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read
+        < if 
+          disc
+          tmp.buff read buffer.cx . copy read 1 + put disc
+
+          ret
+        end
+        tmp.buff read buffer.cx . read 
+        tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read
+        == if 
+          tmp.buff read buffer.cy . copy read 1 + put disc
+          disc
+          tmp.buff read buffer.cx . 0 put disc
+
+          ret
+        end
+      end
+    end
+    disc
+
+    tmp.buff read buffer.cx . read 
+    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read > if
+      tmp.buff read buffer.cx .
+      tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read
+      put disc
+    end
+    
+    ret
+  end
+  
+  oper proc updatescroll 1 0
+    tmp.buff swap put disc
+
+    tmp.buff read buffer.rx .
+    0 put disc
+
+    tmp.buff read buffer.cy . read
+    tmp.buff read buffer.numrows . read < if
+      tmp.buff read buffer.rx .
+      tmp.buff read buffer.cx . read
+      buffer.getrx put disc
+    end
+
+    tmp.buff read buffer.sy . read 
+    tmp.buff read buffer.cy . read > if
+      tmp.buff read buffer.sy .
+      tmp.buff read buffer.cy . read
+      put disc
+    end
+
+    tmp.buff read buffer.sy . read 
+    screen.height read +
+    tmp.buff read buffer.cy . read > ! if
+      tmp.buff read buffer.sy .
+
+      tmp.buff read buffer.cy . read
+      screen.height read - 1 +
+      
+      put disc
+    end
+    tmp.buff read buffer.sx . read 
+    tmp.buff read buffer.rx . read > if
+      tmp.buff read buffer.sx .
+      tmp.buff read buffer.rx . read
+      put disc
+    end
+
+    tmp.buff read buffer.sx . read 
+    screen.width read +
+    tmp.buff read buffer.rx . read > ! if
+      tmp.buff read buffer.sx .
+
+      tmp.buff read buffer.rx . read
+      screen.width read - 1 +
+      
+      put disc
+    end
+
+    ret
+  end
+
+  oper proc render 1 0
+    tmp.buff swap put disc
+
+    0
+    do
+      tmp.buff read buffer.sy . read covr +
+      tmp.buff read swap
+      buffer.getrow
+      covr
+      covr erow.idx . swap put disc
+      erow.renderbuff
+      
+      1 +
+      copy screen.height read <
+    end
+    disc
+
+    ret
+  end
+end
