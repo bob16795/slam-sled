@@ -4,12 +4,12 @@ inc "stdlib/range.slm"
 inc "stdlib/arrays.slm"
 inc "stdlib.slm"
 
+inc "./lib/highlight.slm"
 inc "./lib/input.slm"
 inc "./lib/runner.slm"
 inc "./lib/prompt.slm"
 inc "./lib/status.slm"
 inc "./lib/editor.slm"
-inc "./lib/highlight.slm"
 inc "./lib/terminal.slm"
 inc "./lib/row.slm"
 inc "./lib/buffer.slm"
@@ -77,15 +77,12 @@ end
 }
 
 oper proc draw 0 0
-  "scroll" cstr.println
   buffer.current read
   buffer.updatescroll
 
-  "buffer" cstr.println
   buffer.current read
   buffer.render
 
-  "status" cstr.println
   status.render
 
   buffer.current read

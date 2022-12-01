@@ -23,7 +23,7 @@ class prompt
 
       tmp.char readc 13 == if 
         buffer.current read
-        "" buffer.setstatus
+        " " buffer.setstatus
         disc
         prompt.buffer read str.data . 
         prompt.buffer read str.size . read + 0 putc disc 

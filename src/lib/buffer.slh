@@ -29,7 +29,7 @@ class buffer
   prop sy int.SIZE
 
   prop syntax int.SIZE
-  prop dirty bool.SIZE
+  prop dirty int.SIZE
 
   prop numrows int.SIZE
   prop rows int.SIZE

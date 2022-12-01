@@ -33,7 +33,7 @@ class erow
   head oper proc resetrender 1 0
   head oper proc resethi 1 0
 
-  head oper proc render 1 0
+  head oper proc renderbuff 1 0
 
   head oper proc free 1 0
 end

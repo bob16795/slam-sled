@@ -65,6 +65,10 @@ class status
     end
     status.status read status.leftbuf . swap put disc
 
+    status.status read status.leftbuf . read
+    copy str.size . read
+    swap str.data . + 0 putc disc
+
     ret
   end
 
@@ -73,6 +77,10 @@ class status
     ` ` (str.sput)
     status.status read status.centerbuf . swap put disc
 
+    status.status read status.centerbuf . read
+    copy str.size . read
+    swap str.data . + 0 putc disc
+    
     ret
   end
 
@@ -88,6 +96,10 @@ class status
       disc buffer.current read buffer.syntax . read syntax.name . read
     end (str.catc)
     status.status read status.rightbuf . swap put disc
+
+    status.status read status.rightbuf . read
+    copy str.size . read
+    swap str.data . + 0 putc disc
 
     ret
   end

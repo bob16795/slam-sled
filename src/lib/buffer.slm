@@ -112,8 +112,8 @@ class buffer
   oper proc appendstatus 2 0
     swap tmp.msc swap put disc
 
-    tmp.msc read buffer.status . read swap
-    (str.catc)
+    tmp.msc read buffer.status . read
+    swap (str.catc)
     tmp.msc read buffer.status . swap put disc
 
     ret
@@ -225,7 +225,7 @@ class buffer
   end
 
   oper proc save 1 0
-    swap tmp.buff swap put disc
+    tmp.buff swap put disc
 
     tmp.buff read buffer.filename . read NULL == if
       "Save As: " prompt.show
@@ -235,7 +235,7 @@ class buffer
 
       buffer.updateft
     end
-    
+
     tmp.buff read buffer.str
 
     511
@@ -258,15 +258,14 @@ class buffer
 
     tmp.fp read
     (os.close)
-
-    tmp.ln read str.size . read
+    
     tmp.buff read
     "Wrote " buffer.setstatus
     tmp.buff read
-    swap int.cstr buffer.appendstatus
+    tmp.ln read str.size . read int.cstr buffer.appendstatus
     tmp.buff read
     " bytes" buffer.appendstatus
-
+    
     tmp.ln read (str.free)
 
     tmp.buff read buffer.dirty . 0 put disc
@@ -506,8 +505,10 @@ class buffer
       tmp.buff read buffer.sy . read covr +
       tmp.buff read swap
       buffer.getrow
-      covr
-      covr erow.idx . swap put disc
+      copy NULL != if
+        covr tmp.buff read buffer.sy . read +
+        covr erow.idx . swap put disc
+      end
       erow.renderbuff
       
       1 +

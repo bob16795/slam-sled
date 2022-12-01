@@ -32,16 +32,14 @@ class hi
     copy hi.HL_CALL == if disc 4 ret end
     copy hi.HL_COMMENT == if disc 252 ret end
     copy hi.HL_MLCOMMENT == if disc 252 ret end
-    disc 7
-
-    ret
+    disc 7 ret
   end
 end
 
 class syntax
-  oper proc new 6 1
+  oper proc new 7 1
     tmp.msc 
-    int.SIZE 6 *
+    syntax.SIZE
     (heap.zalloc)
     put disc
 

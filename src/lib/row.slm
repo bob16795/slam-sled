@@ -2,13 +2,12 @@ inc "./lib/row.slh"
 
 class erow
   oper proc updaterender 1 0
-
     tmp.row swap put disc
 
     tmp.row read erow.render . read NULL != if
       ret
     end
-
+    
     tmp.str (str.new) put disc
     tmp.char2 0 put disc
 
@@ -52,7 +51,7 @@ class erow
     tmp.str read str.data .
     tmp.str read str.size . read
     (mem.cpy)
-
+  
     tmp.row read erow.resethi
     
     tmp.str read (str.free)
@@ -61,7 +60,6 @@ class erow
   end
 
   oper proc updatehi 1 0
-
     tmp.row swap put disc
 
     tmp.row read erow.hl . read NULL != if
@@ -150,20 +148,6 @@ class erow
       erow.instring read ! &&
       if
         tmp.char2 read tmp.row read erow.render . read +
-        buffer.current read buffer.syntax . read syntax.kw1 . read
-        hi.iskw
-        copy if
-          tmp.char2 read tmp.row read erow.render . read + covr + readc
-          terminal.issepr if
-            copy
-            tmp.char2 read tmp.row read erow.hl . read + swap
-            hi.HL_KEYWORD1 swap
-            (mem.set)
-          end
-        end
-        disc
-
-        tmp.char2 read tmp.row read erow.render . read +
         buffer.current read buffer.syntax . read syntax.kw2 . read
         hi.iskw
         copy if
@@ -172,6 +156,20 @@ class erow
             copy
             tmp.char2 read tmp.row read erow.hl . read + swap
             hi.HL_KEYWORD2 swap
+            (mem.set)
+          end
+        end
+        disc
+
+        tmp.char2 read tmp.row read erow.render . read +
+        buffer.current read buffer.syntax . read syntax.kw1 . read
+        hi.iskw
+        copy if
+          tmp.char2 read tmp.row read erow.render . read + covr + readc
+          terminal.issepr if
+            copy
+            tmp.char2 read tmp.row read erow.hl . read + swap
+            hi.HL_KEYWORD1 swap
             (mem.set)
           end
         end
@@ -252,27 +250,19 @@ class erow
 
       tmp.char2 read 1 +
       tmp.char2 read
-      tmp.row read erow.rsize . read <
+      tmp.row read erow.rsize . read > !
     end
     disc
 
     tmp.row read erow.hlopencomment .
     erow.incomment read
-    covr covr != if
+    covr read covr != if
       buffer.current read
       tmp.row read erow.idx . read 1 + buffer.getrow
       NULL != if
         buffer.current read
         tmp.row read erow.idx . read 1 + buffer.getrow
-        erow.hl . read NULL != if
-          buffer.current read
-          tmp.row read erow.idx . read 1 + buffer.getrow
-          erow.hl . read (heap.free)
-          
-          buffer.current read
-          tmp.row read erow.idx . read 1 + buffer.getrow
-          erow.hl . NULL put disc
-        end
+        erow.resethi
       end
     end
     put disc
@@ -283,11 +273,11 @@ class erow
   end
 
   oper proc resetrender 1 0
-    tmp.row swap put disc
+    tmp.msc swap put disc
 
-    tmp.row read erow.render . read NULL != if
-      tmp.row read erow.render . read (heap.free)
-      tmp.row read erow.render . NULL put disc
+    tmp.msc read erow.render . read NULL != if
+      tmp.msc read erow.render . read (heap.free)
+      tmp.msc read erow.render . NULL put disc
     end
 
     buffer.current read buffer.dirty . copy read 1 + put disc
@@ -296,14 +286,17 @@ class erow
   end
 
   oper proc resethi 1 0
-    tmp.row swap put disc
-
-    tmp.row read erow.hl . read NULL != if
-      tmp.row read erow.hl . read (heap.free)
-      tmp.row read erow.hl . NULL put disc
+    buffer.current read buffer.syntax . read NULL == if
+      disc
+      ret
     end
 
-    buffer.current read buffer.dirty . copy read 1 + put disc
+    tmp.msc swap put disc
+
+    tmp.msc read erow.hl . read NULL != if
+      tmp.msc read erow.hl . read (heap.free)
+      tmp.msc read erow.hl . NULL put disc
+    end
 
     ret
   end
@@ -323,7 +316,7 @@ class erow
     {TODO: tmp.buff}
     buffer.current read buffer.sx . read - 1 +
     tmp.size swap put disc
-    
+
     tmp.size read 0 < if
       tmp.size 0 put disc
     end
@@ -362,8 +355,16 @@ class erow
         readc
         tmp.char swap putc disc
 
-        copy tmp.row read erow.hl . read + readc
-        hi.hltocolor terminal.setfgcolor
+        
+        7
+        tmp.row read erow.hl . read
+        NULL != if
+          disc
+          copy tmp.row read erow.hl . read +
+          buffer.current read buffer.sx . read +
+          readc hi.hltocolor
+        end
+        terminal.setfgcolor
         
         tmp.char readc terminal.iscntrl ! if
           tmp.char terminal.write

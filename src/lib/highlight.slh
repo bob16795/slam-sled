@@ -17,6 +17,7 @@ class hi
       HL_CALL
   end
 
+  head oper proc iskw 2 1
   head oper proc hltocolor 1 1
 end
 
@@ -29,8 +30,6 @@ class syntax
 
   prop kw1 int.SIZE
   prop kw2 int.SIZE
-
-  head oper proc iskw 2 1
 
   head oper proc new 6 1
 end
