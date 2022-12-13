@@ -1,5 +1,3 @@
-inc "stdlib.slm"
-
 inc "./lib/buffer.slh"
 
 {inc "compiler/simulator.slm"}

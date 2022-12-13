@@ -1,12 +1,12 @@
-inc "stdlib.slm"
-inc "./lib/buffer.slh"
+inc "./lib/buffer.slm"
+inc "std/dlist.slm"
 
 class status
-  prop leftbuf int.SIZE
-  prop rightbuf int.SIZE
-  prop centerbuf int.SIZE
+  prop leftbuf 8
+  prop rightbuf 8
+  prop centerbuf 8
 
-  var status int.SIZE
+  var status 8
 
   head oper proc init 0 0
 

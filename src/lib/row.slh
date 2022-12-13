@@ -1,31 +1,18 @@
 inc "./lib/buffer.slh"
 inc "./lib/highlight.slh"
-inc "./lib/tmp.slh"
-inc "stdlib.slm"
 
 class erow
   const TABSIZE 4
 
-  prop idx int.SIZE
-  prop hlopencomment int.SIZE
+  prop idx 8
+  prop hlopencomment 8
   
-  prop size int.SIZE
-  prop rsize int.SIZE
+  prop size 8
+  prop rsize 8
 
-  prop chars int.SIZE
-  prop render int.SIZE
-  prop hl int.SIZE
-
-  var incomment int.SIZE
-  var prevsep int.SIZE
-  var instring int.SIZE
-  var linecomm int.SIZE
-  var incall int.SIZE
-  var prevhl int.SIZE
-
-  var scslen int.SIZE
-  var mcslen int.SIZE
-  var mcelen int.SIZE
+  prop chars 8
+  prop render 8
+  prop hl 8
 
   head oper proc updaterender 1 0
   head oper proc updatehi 1 0

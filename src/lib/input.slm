@@ -2,24 +2,24 @@ inc "./lib/input.slh"
 
 class input
   oper proc readchar 0 1
-    tmp.char
-    0
-    put disc
+    var tmpchar 8
+
+    tmpchar 0 put disc
 
     do
-      1 tmp.char 0 (os.readf)
+      1 tmpchar 0 os.readf
       
       -1 ==
     end
 
-    tmp.char readc
+    tmpchar readc
     copy 27 == if
-      1 tmp.char 0 (os.readf)
-      tmp.char readc
+      1 tmpchar 0 os.readf disc
+      tmpchar readc
 
       copy '[' == if
-        1 tmp.char 0 (os.readf)
-        tmp.char readc
+        1 tmpchar 0 os.readf disc
+        tmpchar readc
 
         copy 'A' == if 
           disc disc disc
@@ -51,8 +51,8 @@ class input
         end
 
         copy '1' == if
-          1 tmp.char 0 (os.readf)
-          tmp.char readc
+          1 tmpchar 0 os.readf disc
+          tmpchar readc
           copy '~' == if 
             disc disc disc disc
             input.EK_HOME ret
@@ -60,8 +60,8 @@ class input
           disc
         end
         copy '3' == if
-          1 tmp.char 0 (os.readf)
-          tmp.char readc
+          1 tmpchar 0 os.readf disc
+          tmpchar readc
           copy '~' == if 
             disc disc disc disc
             input.EK_DEL ret
@@ -69,8 +69,8 @@ class input
           disc
         end
         copy '4' == if
-          1 tmp.char 0 (os.readf)
-          tmp.char readc
+          1 tmpchar 0 os.readf disc
+          tmpchar readc
           copy '~' == if 
             disc disc disc disc
             input.EK_END ret
@@ -78,8 +78,8 @@ class input
           disc
         end
         copy '5' == if
-          1 tmp.char 0 (os.readf)
-          tmp.char readc
+          1 tmpchar 0 os.readf disc
+          tmpchar readc
           copy '~' == if 
             disc disc disc disc
             input.EK_PAGE_UP ret
@@ -87,8 +87,8 @@ class input
           disc
         end
         copy '6' == if
-          1 tmp.char 0 (os.readf)
-          tmp.char readc
+          1 tmpchar 0 os.readf disc
+          tmpchar readc
           copy '~' == if 
             disc disc disc disc
             input.EK_PAGE_DOWN ret
@@ -98,8 +98,8 @@ class input
         disc
       end
       copy 'O' == if
-        1 tmp.char 0 (os.readf)
-        tmp.char readc
+        1 tmpchar 0 os.readf disc
+        tmpchar readc
 
         copy 'H' == if 
           disc disc disc
@@ -123,6 +123,7 @@ class input
       copy NULL == if disc disc ret end
 
       buffer.current read
+      swap
       buffer.open
 
       disc ret
@@ -149,6 +150,16 @@ class input
       terminal.setrawmode
       
       0 quit
+    end
+    copy 'n' terminal.keyCTRL == if
+      1 buffer.cycle
+
+      disc ret
+    end
+    copy 'p' terminal.keyCTRL == if
+      -1 buffer.cycle
+
+      disc ret
     end
     copy 13 == if
       buffer.current read

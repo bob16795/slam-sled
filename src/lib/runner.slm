@@ -2,13 +2,18 @@ inc "./lib/runner.slh"
 
 class runner
   oper proc init 0 0
+    {simulator.setup}
+
+    {string manip}
+    {"cstr_println" (cstr.println) 1 0 simulator.addproccomp}
+
+    {runner stuff}
+    {"sled_source" (runner.source) 1 0 simulator.addproccomp}
 
     ret
   end
 
   oper proc source 1 0
-    disc
-
     {
     bool.false
     (lexer.new) (lexer.run)
@@ -24,13 +29,9 @@ class runner
     buffer.current read
     "SUCCESS:" buffer.setstatus
 
-    simulator.simstack read
     do
-      0
-      covr (dlist.pop)
+      simulator.simstack read (dlist.pop)
       copy NULL != if
-        read
-
         buffer.current read
         " " buffer.appendstatus
 
@@ -43,28 +44,31 @@ class runner
 
           -1
         end
-        -1 != if
+        copy simstackentry.SE_POINTER == if
           disc
+          copy simstackentry.data . read
+          buffer.current read swap
+          buffer.appendstatus
+
+          -1
+        end
+        -1 != if
           buffer.current read
           "?" buffer.appendstatus
         end
         disc
-        disc
 
-        0 1
       end
-      disc
+      NULL !=
     end
-    disc
     }
+    disc
 
     ret
   end
   
   oper proc run 1 0
-    disc
     {
-
     tmp.str swap put disc
 
     511
@@ -98,6 +102,7 @@ class runner
 
     "/tmp/runner.slm" runner.source
     }
+    disc
 
     ret
   end

@@ -2,13 +2,15 @@ inc "./lib/highlight.slh"
 
 class hi
   oper proc iskw 2 1
-    swap tmp.msc swap put disc
+    var result 8
+
+    swap result swap put disc
 
     do
-      tmp.msc read
+      result read
       covr
       copy cstr.len
-      (mem.eq) if
+      mem.eq if
         copy cstr.len
         swap disc
         ret
@@ -38,21 +40,23 @@ end
 
 class syntax
   oper proc new 7 1
-    tmp.msc 
+    var result 8
+
+    result 
     syntax.SIZE
-    (heap.zalloc)
+    heap.zalloc
     put disc
 
-    tmp.msc read syntax.flags . swap put disc
-    tmp.msc read syntax.name . swap put disc
-    tmp.msc read syntax.scomment . swap put disc
-    tmp.msc read syntax.mcommente . swap put disc
-    tmp.msc read syntax.mcomments . swap put disc
+    result read syntax.flags . swap put disc
+    result read syntax.name . swap put disc
+    result read syntax.scomment . swap put disc
+    result read syntax.mcommente . swap put disc
+    result read syntax.mcomments . swap put disc
 
-    tmp.msc read syntax.kw2 . swap put disc
-    tmp.msc read syntax.kw1 . swap put disc
+    result read syntax.kw2 . swap put disc
+    result read syntax.kw1 . swap put disc
 
-    tmp.msc read 
+    result read 
 
     ret
   end

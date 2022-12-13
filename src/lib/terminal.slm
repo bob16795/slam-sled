@@ -2,14 +2,14 @@ inc "./lib/terminal.slh"
 
 class terminal
   oper proc init 0 0
-    terminal.buffer (str.new) put disc
+    terminal.buffer str.new put disc
 
     terminal.getsize
     screen.width swap put disc
     screen.height swap put disc
 
     terminal.buffer read
-    "\e[H" (str.catc)
+    "\e[H" str.catc
     terminal.buffer swap put disc
 
     ret
@@ -52,13 +52,15 @@ class terminal
   end
 
   oper proc issepr 1 1
+    var char 1
+
     copy 0 == if disc bool.true ret end
   
-    tmp.char swap putc disc
+    char swap putc disc
 
     " \t"
     do
-      copy readc tmp.char readc == if
+      copy readc char readc == if
         disc bool.true ret
       end
 
@@ -73,10 +75,12 @@ class terminal
   end
 
   proc setrawmode 1 0
-    if
-      tmp.msc termios.SIZE (heap.zalloc) put disc
+    var raw 8
 
-      tmp.msc read
+    if
+      raw termios.SIZE heap.zalloc put disc
+
+      raw read
       5401h
       0
       sysc.IOCTL
@@ -84,34 +88,34 @@ class terminal
       disc
 
       screen.starttermios
-      tmp.msc read termios.SIZE (mem.cpy)
+      raw read termios.SIZE mem.cpy
 
-      tmp.msc read termios.iflag .
+      raw read termios.iflag .
       copy read
       BRKINT ICRNL || INPCK || ISTRIP || IXON || ~ &&
       put disc
 
-      tmp.msc read termios.oflag .
+      raw read termios.oflag .
       copy read
       OPOST ~ &&
       put disc
 
-      tmp.msc read termios.lflag .
+      raw read termios.lflag .
       copy read
       ECHO ISIG || ICANON || IEXTEN || ~ &&
       put disc
 
-      tmp.msc read termios.cc . VMIN + 0 putc disc
-      tmp.msc read termios.cc . VTIME + 1 putc disc
+      raw read termios.cc . VMIN + 0 putc disc
+      raw read termios.cc . VTIME + 1 putc disc
 
-      tmp.msc read
+      raw read
       5404h
       0
       sysc.IOCTL
       sys3
       disc
 
-      tmp.msc read (heap.free)
+      raw read heap.free
 
       ret
     end
@@ -128,12 +132,12 @@ class terminal
   oper proc setcursor 1 0
     if
       terminal.buffer read
-      "\e[?25h" (str.catc)
+      "\e[?25h" str.catc
       terminal.buffer swap put disc
     end
     terminal.buffer read
-    "\e[?25l" (str.catc)
-    "\e[H" (str.catc)
+    "\e[?25l" str.catc
+    "\e[H" str.catc
     terminal.buffer swap put disc
 
     ret
@@ -144,9 +148,9 @@ class terminal
     terminal.fgcolor swap put disc
 
     terminal.buffer read
-    "\e[38;5;" (str.catc)
-    terminal.fgcolor read int.cstr (str.catc)
-    "m" (str.catc)
+    "\e[38;5;" str.catc
+    terminal.fgcolor read int.cstr str.catc
+    "m" str.catc
     terminal.buffer swap put disc
 
     ret
@@ -157,9 +161,9 @@ class terminal
     terminal.bgcolor swap put disc
 
     terminal.buffer read
-    "\e[48;5;" (str.catc)
-    terminal.bgcolor read int.cstr (str.catc)
-    "m" (str.catc)
+    "\e[48;5;" str.catc
+    terminal.bgcolor read int.cstr str.catc
+    "m" str.catc
     terminal.buffer swap put disc
 
     ret
@@ -167,26 +171,28 @@ class terminal
   
   oper proc write 1 0
     terminal.buffer read
-    swap (str.catc)
+    swap str.catc
     terminal.buffer swap put disc
 
     ret
   end
 
   oper proc movecursor 1 0
-    tmp.buff swap put disc
+    var buff 8
 
-    tmp.buff read buffer.rx . read 1 + buffer.NUMBERCOL +
-    tmp.buff read buffer.sx . read -
-    tmp.buff read buffer.cy . read 1 +
-    tmp.buff read buffer.sy . read -
+    buff swap put disc
+
+    buff read buffer.rx . read 1 + buffer.NUMBERCOL +
+    buff read buffer.sx . read -
+    buff read buffer.cy . read 1 +
+    buff read buffer.sy . read -
 
     terminal.buffer read
-    "\e[" (str.catc)
-    swap int.cstr (str.catc)
-    ";" (str.catc)
-    swap int.cstr (str.catc)
-    "H" (str.catc)
+    "\e[" str.catc
+    swap int.cstr str.catc
+    ";" str.catc
+    swap int.cstr str.catc
+    "H" str.catc
     terminal.buffer swap put disc
 
     ret
@@ -194,17 +200,17 @@ class terminal
 
   oper proc flushbuffer 0 0
     terminal.buffer read
-    (str.print)
+    str.print
     
     terminal.buffer read
-    (str.free)
+    str.free
 
     terminal.buffer
-    (str.new)
+    str.new
     put disc
 
     terminal.buffer read
-    "\e[H" (str.catc)
+    "\e[H" str.catc
     terminal.buffer swap put disc
 
     ret

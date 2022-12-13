@@ -1,6 +1,4 @@
 inc "./lib/row.slh"
-inc "stdlib/mem.slm"
-inc "stdlib.slm"
 
 class editor
   head oper proc insertchar 2 0

@@ -1,5 +1,3 @@
-inc "stdlib.slm"
-
 const ISIG 1
 const ICANON 2
 const IEXTEN 32768
@@ -19,25 +17,24 @@ const VMIN 6
 const VTIME 5
 
 class termios
-  const NCCS 19
   prop iflag 4
   prop oflag 4
   prop cflag 4
   prop lflag 4
 
   prop line 1
-  prop cc termios.NCCS
+  prop cc 19
 end
 
 class winsize
   prop col 2
   prop row 2
-  prop _ 8
+  prop msc 8
 end
 
 class screen
-  var width int.SIZE
-  var height int.SIZE
+  var width 8
+  var height 8
 
   var starttermios termios.SIZE
 end
@@ -49,10 +46,10 @@ class terminal
       MODE_VISUAL
   end
 
-  var inputmode int.SIZE
-  var fgcolor int.SIZE
-  var bgcolor int.SIZE
-  var buffer int.SIZE
+  var inputmode 8
+  var fgcolor 8
+  var bgcolor 8
+  var buffer 8
   var ws winsize.SIZE
 
   head oper proc init 0 0

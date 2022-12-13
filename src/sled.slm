@@ -1,8 +1,8 @@
-inc "stdlib/os.slm"
-inc "stdlib/string.slm"
-inc "stdlib/range.slm"
-inc "stdlib/arrays.slm"
-inc "stdlib.slm"
+inc "std/os.slm"
+inc "std/str.slm"
+inc "std/int.slm"
+inc "std/cstr.slm"
+inc "std/range.slm"
 
 inc "./lib/highlight.slm"
 inc "./lib/input.slm"
@@ -47,26 +47,9 @@ oper proc processkey 1 0
 
     disc ret
   end
-  copy 'n' CTRL == if
-    buffer.idx copy read 1 +
-    buffer.cnt /% swap disc put disc
-
-    disc ret
-  end
-  copy 'p' CTRL == if
-    buffer.idx copy read 1 -
-    buffer.cnt /% swap disc put disc
-
-    disc ret
-  end
   copy 9 == if
     9 insertchar
 
-    disc ret
-  end
-  copy iscntrl
-  covr 'l' CTRL == ||
-  covr 27 == || if
     disc ret
   end
 
@@ -93,29 +76,35 @@ oper proc draw 0 0
   ret
 end
 
+
 oper proc main 0 0
-  buffer.init
-  terminal.init
-  runner.init
-  status.init
+  var home 8
 
-  {
-  tmp.str (str.new) put disc
+  buffer.init "buffer init" cstr.println
+  terminal.init "terminal init" cstr.println
+  runner.init "runner init" cstr.println
+  status.init "status init" cstr.println
+  
 
-  tmp.str read
-  "HOME" (os.env) (str.catc)
-  "/.config/sled/rc.slm" (str.catc)
-  tmp.str swap put disc
+  prompt.promptdraw 
+  (draw)
+  put disc
 
-  tmp.str read str.data .
+  home str.new put disc
+
+  home read
+  "HOME" os.env str.catc
+  "/.config/sled/rc.slm" str.catc
+  home swap put disc
+
+  home read str.data .
   runner.source
 
-  tmp.str read (str.free)
-  }
+  home read str.free
 
   argc 1 > if 
     buffer.current read
-    1 (os.args)
+    1 os.args
     buffer.open
   end
   argc 1 == if 

@@ -2,231 +2,250 @@ inc "./lib/editor.slh"
 
 class editor
   oper proc insertrow 2 0
-    tmp.str swap put disc
-    tmp.buff swap put disc
+    var text 8
+    var buff 8
+    var cy 8
+    var row 8
 
-    tmp.buff read buffer.cy . read
-    tmp.at swap put disc
+    text swap put disc
+    buff swap put disc
 
-    tmp.at read 0 < 
-    tmp.at read
-    tmp.buff read buffer.numrows . read > ||
+    buff read buffer.cy . read
+    cy swap put disc
+
+    cy read 0 < 
+    cy read
+    buff read buffer.numrows . read > ||
     if
       ret
     end
 
-    tmp.buff read buffer.rows . read
-    tmp.buff read buffer.numrows . read 1 + int.SIZE *
-    (heap.realloc)
-    tmp.buff read buffer.rows . swap put disc
+    buff read buffer.rows . read
+    buff read buffer.numrows . read 1 + int.SIZE *
+    heap.realloc
+    buff read buffer.rows . swap put disc
 
-    tmp.buff read buffer.numrows . copy read 1 + put disc
+    buff read buffer.numrows . copy read 1 + put disc
 
-    tmp.buff read buffer.numrows . read 1 != if
-      tmp.buff read buffer.rows . read tmp.at read int.SIZE * +
-      tmp.buff read buffer.rows . read tmp.at read 1 + int.SIZE * +
-      tmp.buff read buffer.numrows . read tmp.at read - 1 - int.SIZE *
-      movemem
+    buff read buffer.numrows . read 1 != if
+      buff read buffer.rows . read cy read int.SIZE * +
+      buff read buffer.rows . read cy read 1 + int.SIZE * +
+      buff read buffer.numrows . read cy read - 1 - int.SIZE *
+      mem.mov
     end
 
-    tmp.row
-    erow.SIZE (heap.zalloc)
+    row
+    erow.SIZE heap.zalloc
     put disc
 
-    tmp.row read erow.size .
-    tmp.str read cstr.len
+    row read erow.size .
+    text read cstr.len
     put disc
 
-    tmp.row read erow.chars .
-    tmp.str read cstr.len 1 + (heap.zalloc)
+    row read erow.chars .
+    text read cstr.len 1 + heap.zalloc
     put disc
 
-    tmp.row read erow.chars . read
-    tmp.str read
-    tmp.str read cstr.len
-    (mem.cpy)
+    row read erow.chars . read
+    text read
+    text read cstr.len
+    mem.cpy
 
-    tmp.row read
+    row read
     erow.resetrender
 
-    tmp.buff read buffer.rows . read
-    tmp.at read int.SIZE * +
-    tmp.row read
+    buff read buffer.rows . read
+    text read int.SIZE * +
+    row read
     put disc
 
     ret
   end
 
-  oper proc insertchar 1 0
-    swap tmp.buff swap put disc
+  oper proc insertchar 2 0
+    var buff 8
+    var cx 8
 
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.chars . read
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read 2 +
-    (heap.realloc)
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.chars . swap put disc
+    swap buff swap put disc
 
-    tmp.buff read buffer.cx . read
-    tmp.at swap put disc
+    buff read copy buffer.cy . read buffer.getrow erow.chars . read
+    buff read copy buffer.cy . read buffer.getrow erow.size . read 2 +
+    heap.realloc
+    buff read copy buffer.cy . read buffer.getrow erow.chars . swap put disc
+
+    buff read buffer.cx . read
+    cx swap put disc
     
-    tmp.at read 0 < 
-    tmp.at read
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read > ||
+    cx read 0 < 
+    cx read
+    buff read copy buffer.cy . read buffer.getrow erow.size . read > ||
     if 
       disc
-      tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read
+      buff read copy buffer.cy . read buffer.getrow erow.size . read
     end
 
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.chars . read tmp.at read +
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.chars . read tmp.at read + 1 +
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read tmp.at read - 1 +
-    movemem
+    buff read copy buffer.cy . read buffer.getrow erow.chars . read cx read +
+    buff read copy buffer.cy . read buffer.getrow erow.chars . read cx read + 1 +
+    buff read copy buffer.cy . read buffer.getrow erow.size . read cx read - 1 +
+    mem.mov
 
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . copy read 1 + put disc
+    buff read copy buffer.cy . read buffer.getrow erow.size . copy read 1 + put disc
 
-    tmp.buff read buffer.cx . copy read 1 + put disc
+    buff read buffer.cx . copy read 1 + put disc
     
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.chars . read
-    tmp.at read + swap putc disc
+    buff read copy buffer.cy . read buffer.getrow erow.chars . read
+    cx read + swap putc disc
 
-    tmp.buff read
-    tmp.buff read buffer.cy . read
+    buff read
+    buff read buffer.cy . read
     buffer.getrow erow.resetrender
 
     ret
   end
 
   oper proc insertreturn 1 0
-    tmp.buff swap put disc
+    var buff 8
 
-    tmp.buff read buffer.cy . copy read 1 + put disc
-    tmp.buff read copy buffer.cy . read 1 - buffer.getrow erow.chars . read
-    tmp.buff read buffer.cx . read +
-    tmp.buff read swap
+    buff swap put disc
+
+    buff read buffer.cy . copy read 1 + put disc
+    buff read copy buffer.cy . read 1 - buffer.getrow erow.chars . read
+    buff read buffer.cx . read +
+    buff read swap
     editor.insertrow
-    tmp.buff read copy buffer.cy . read 1 - buffer.getrow erow.chars . read
-    tmp.buff read buffer.cx . read + 0 putc disc
+    buff read copy buffer.cy . read 1 - buffer.getrow erow.chars . read
+    buff read buffer.cx . read + 0 putc disc
 
-    tmp.buff read copy buffer.cy . read 1 - buffer.getrow erow.size .
-    tmp.buff read buffer.cx . read
+    buff read copy buffer.cy . read 1 - buffer.getrow erow.size .
+    buff read buffer.cx . read
     put disc
 
-    tmp.buff read
-    tmp.buff read buffer.cy . read
+    buff read
+    buff read buffer.cy . read
     buffer.getrow erow.resetrender
 
-    tmp.buff read
-    tmp.buff read buffer.cy . read 1 -
+    buff read
+    buff read buffer.cy . read 1 -
     buffer.getrow erow.resetrender
 
-    tmp.buff read buffer.cx . 0 put disc
+    buff read buffer.cx . 0 put disc
 
     ret
   end
 
   oper proc appendrow 2 0
-    tmp.at swap put disc
-    tmp.buff swap put disc
+    var buff 8
+    var str 8
+    var idx 8
 
-    tmp.str (str.new) put disc
+    idx swap put disc
+    buff swap put disc
 
-    tmp.str read
-    tmp.buff read
-    tmp.at read buffer.getrow erow.chars . read (str.catc)
-    tmp.buff read
-    tmp.at read 1 + buffer.getrow erow.chars . read (str.catc)
-    tmp.str swap put disc
+    str str.new put disc
 
-    tmp.buff read
-    tmp.at read buffer.getrow erow.chars . read
-    tmp.str read str.size . read
-    (heap.realloc)
-    tmp.buff read
-    tmp.at read buffer.getrow erow.chars . swap put disc
+    str read
+    buff read
+    idx read buffer.getrow erow.chars . read str.catc
+    buff read
+    idx read 1 + buffer.getrow erow.chars . read str.catc
+    str swap put disc
+
+    buff read
+    idx read buffer.getrow erow.chars . read
+    str read str.size . read
+    heap.realloc
+    buff read
+    idx read buffer.getrow erow.chars . swap put disc
     
-    tmp.buff read
-    tmp.at read buffer.getrow erow.chars . read
-    tmp.str read str.data .
-    tmp.str read str.size . read
-    (mem.cpy)
+    buff read
+    idx read buffer.getrow erow.chars . read
+    str read str.data .
+    str read str.size . read
+    mem.cpy
 
-    tmp.buff read
-    tmp.at read buffer.getrow erow.size .
-    tmp.str read str.size . read
+    buff read
+    idx read buffer.getrow erow.size .
+    str read str.size . read
     put disc
     
-    tmp.str read (str.free)
+    str read str.free
 
-    tmp.buff read
-    tmp.buff read buffer.cy . read
+    buff read
+    buff read buffer.cy . read
     buffer.getrow erow.resetrender
 
     ret
   end
 
   oper proc delrow 2 0
-    tmp.at swap put disc
-    tmp.buff swap put disc
+    var buff 8
+    var idx 8
 
-    tmp.buff read
-    tmp.at read
+    idx swap put disc
+    buff swap put disc
+
+    buff read
+    idx read
     buffer.getrow erow.free
     
-    tmp.at read 1 + int.SIZE *
-    tmp.buff read buffer.rows . read + 
-    tmp.at read int.SIZE *
-    tmp.buff read buffer.rows . read + 
-    tmp.buff read buffer.numrows . read tmp.at read - int.SIZE *
-    movemem
+    idx read 1 + int.SIZE *
+    buff read buffer.rows . read + 
+    idx read int.SIZE *
+    buff read buffer.rows . read + 
+    buff read buffer.numrows . read idx read - int.SIZE *
+    mem.mov
 
-    tmp.buff read buffer.numrows . copy read 1 - put disc
+    buff read buffer.numrows . copy read 1 - put disc
 
     ret
   end
 
   oper proc delchar 2 0
-    tmp.at swap put disc
-    tmp.buff swap put disc
-  
-    tmp.at read -1 ==
-    tmp.buff read buffer.cy . read 0 == && if ret end
+    var buff 8
+    var idx 8
 
-    tmp.at read -1 == if
-      tmp.buff read buffer.cx .
-      tmp.buff read copy buffer.cy . read 1 - buffer.getrow erow.size . read
+    idx swap put disc
+    buff swap put disc
+  
+    idx read -1 ==
+    buff read buffer.cy . read 0 == && if ret end
+
+    idx read -1 == if
+      buff read buffer.cx .
+      buff read copy buffer.cy . read 1 - buffer.getrow erow.size . read
       put disc
 
-      tmp.buff read copy buffer.cy . read 1 -
+      buff read copy buffer.cy . read 1 -
       editor.appendrow
-      tmp.buff read copy buffer.cy . read
+      buff read copy buffer.cy . read
       editor.delrow
-      tmp.buff read buffer.cy . copy read 1 - put disc
+      buff read buffer.cy . copy read 1 - put disc
 
-      tmp.buff read
-      tmp.buff read buffer.cy . read
+      buff read
+      buff read buffer.cy . read
       buffer.getrow erow.resetrender
 
       ret
     end
     
-    tmp.at read 0 < 
-    tmp.at read
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read < ! ||
-    if 
-      disc
+    idx read 0 < 
+    idx read
+    buff read copy buffer.cy . read buffer.getrow erow.size . read < ! ||
+    if
       ret
     end
 
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.chars . read tmp.at read + 1 +
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.chars . read tmp.at read +
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . read tmp.at read - 1 +
-    movemem
+    buff read copy buffer.cy . read buffer.getrow erow.chars . read idx read + 1 +
+    buff read copy buffer.cy . read buffer.getrow erow.chars . read idx read +
+    buff read copy buffer.cy . read buffer.getrow erow.size . read idx read - 1 +
+    mem.mov
 
-    tmp.buff read copy buffer.cy . read buffer.getrow erow.size . copy read 1 - put disc
+    buff read copy buffer.cy . read buffer.getrow erow.size . copy read 1 - put disc
 
-    tmp.buff read buffer.cx . copy read 1 - put disc
+    buff read buffer.cx . copy read 1 - put disc
 
-    tmp.buff read
-    tmp.buff read buffer.cy . read
+    buff read
+    buff read buffer.cy . read
     buffer.getrow erow.resetrender
 
     ret

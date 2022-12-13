@@ -1,8 +1,9 @@
-inc "stdlib.slm"
+inc "std/str.slm"
 
 class prompt
-  var buffer int.SIZE
-  var headsize int.SIZE
+  var buffer 8
+  var headsize 8
+  var promptdraw 8
 
   head oper proc show 1 1
 end

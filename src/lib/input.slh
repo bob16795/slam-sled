@@ -1,6 +1,3 @@
-inc "stdlib.slm"
-
-inc "./lib/tmp.slh"
 inc "./lib/prompt.slh"
 inc "./lib/buffer.slh"
 inc "./lib/editor.slh"
